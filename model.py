@@ -31,6 +31,7 @@ from tensorflow.python.keras.initializers import Constant
 import numpy as np
 import os
 import sys
+import pandas as pd
 
 # Word2Vec source, data source
 BASE_DIR = "/application/search/ming"
