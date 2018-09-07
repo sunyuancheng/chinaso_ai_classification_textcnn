@@ -18,17 +18,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ========================================================================
-from tensorflow.python.keras.layers import Dense, Flatten, Conv1D, MaxPooling1D, Dropout, Input, concatenate
-from tensorflow.python.keras.layers import Embedding
-from tensorflow.python.keras.models import Model
+from keras.layers import Dense, Flatten, Conv1D, MaxPooling1D, Dropout, Input, concatenate,Embedding
 from keras.models import Model
-
-from tensorflow.python.keras.preprocessing import sequence
-from tensorflow.python.keras.preprocessing.text import Tokenizer
-from tensorflow.python.keras.preprocessing.sequence import pad_sequences
-from tensorflow.python.keras.utils import to_categorical
-from tensorflow.python.keras.initializers import Constant
-
+from keras.initializers import Constant
+from keras.preprocessing import sequence
+from keras.preprocessing.text import Tokenizer
+from keras.preprocessing.sequence import pad_sequences
+from keras.utils import to_categorical
 import numpy as np
 import os
 import sys
