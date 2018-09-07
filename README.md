@@ -1,9 +1,10 @@
 # chinaso_ai_classification_textcnn
+thumb.mobapp.chinaso.com
 
 接口：
 反例接口：
 http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search
-?fields=id,wtitle,wcaption,newsLabel&filters=EQS_resourceState,4&fetchsize=15
+?fields=id,wtitle,wcaption,newsLabel&filters=EQS_resourceState,4&pagestart=1&fetchsize=15
 
 恐怖数据：
 http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search
