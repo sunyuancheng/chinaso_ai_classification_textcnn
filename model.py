@@ -21,6 +21,7 @@
 from tensorflow.python.keras.layers import Dense, Flatten, Conv1D, MaxPooling1D, Dropout, Input, concatenate
 from tensorflow.python.keras.layers import Embedding
 from tensorflow.python.keras.models import Model
+from keras.models import Model
 
 from tensorflow.python.keras.preprocessing import sequence
 from tensorflow.python.keras.preprocessing.text import Tokenizer
