@@ -1,5 +1,4 @@
 # chinaso_ai_classification_textcnn
-thumb.mobapp.chinaso.com
 
 接口：
 反例接口：
