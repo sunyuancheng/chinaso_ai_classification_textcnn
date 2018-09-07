@@ -32,6 +32,7 @@ import numpy as np
 import os
 import sys
 import pandas as pd
+import jieba
 
 # Word2Vec source, data source
 BASE_DIR = "/application/search/ming"
@@ -52,10 +53,55 @@ NUM_EPOCHS = 10
 
 # Prepossessing parameters
 MAX_NUM_WORDS = 20000  # 词典最大词数，若语料中含词数超过该数，则取前MAX_NUM_WORDS个
-MAX_SEQUENCE_LENGTH = 1000  # 每篇文章最长词数
+MAX_SEQUENCE_LENGTH = 2000  # 每篇文章最长词数
 
 
-def text_cnn():
+# def text_cnn():
+#     """
+#     构建text_cnn模型
+#     :return:
+#     """
+#     # Inputs
+#     sequence_input = Input(shape=(MAX_SEQUENCE_LENGTH,), dtype='int32')
+#
+#     # Embeddings layers
+#     # load pre-trained word embeddings into an Embedding layer
+#     # note that we set trainable = False so as to keep the embeddings fixed
+#     embeddings_index = get_embeddings_index()
+#     word_index = get_word_index(texts)
+#     num_words = min(MAX_NUM_WORDS, len(word_index) + 1)
+#     embedding_matrix = get_embedding_matrix(embeddings_index, word_index)
+#     embedding_layer = Embedding(num_words,
+#                                 EMBEDDING_DIM,
+#                                 embeddings_initializer=Constant(embedding_matrix),
+#                                 input_length=MAX_SEQUENCE_LENGTH,
+#                                 trainable=False)
+#     embedded_sequences = embedding_layer(sequence_input)
+#
+#     # conv layers
+#     convs = []
+#     for filter_size in FILTER_SIZES:
+#         l_conv = Conv1D(filters=NUM_FILTERS,
+#                         kernel_size=filter_size,
+#                         activation='relu')(embedded_sequences)
+#         l_pool = MaxPooling1D(MAX_SEQUENCE_LENGTH - filter_size + 1)(l_conv)
+#         l_pool = Flatten()(l_pool)
+#         convs.append(l_pool)
+#     merge = concatenate(convs, axis=1)
+#
+#     x = Dropout(DROPOUT_RATE)(merge)
+#     x = Dense(32, activation='relu')(x)
+#
+#     preds = Dense(units=1, activation='sigmoid')(x)
+#
+#     model = Model(sequence_input, preds)
+#     model.compile(loss="categorical_crossentropy",
+#                   optimizer="rmsprop",
+#                   metrics=['acc'])
+#
+#     return model
+
+def text_cnn(word_index,embedding_matrix):
     """
     构建text_cnn模型
     :return:
@@ -66,10 +112,10 @@ def text_cnn():
     # Embeddings layers
     # load pre-trained word embeddings into an Embedding layer
     # note that we set trainable = False so as to keep the embeddings fixed
-    embeddings_index = get_embeddings_index()
-    word_index = get_word_index()
+    # embeddings_index = get_embeddings_index()
+    # word_index = get_word_index(texts)
     num_words = min(MAX_NUM_WORDS, len(word_index) + 1)
-    embedding_matrix = get_embedding_matrix(embeddings_index, word_index)
+    # embedding_matrix = get_embedding_matrix(embeddings_index, word_index)
     embedding_layer = Embedding(num_words,
                                 EMBEDDING_DIM,
                                 embeddings_initializer=Constant(embedding_matrix),
@@ -89,7 +135,7 @@ def text_cnn():
     merge = concatenate(convs, axis=1)
 
     x = Dropout(DROPOUT_RATE)(merge)
-    x = Dense(32, activation='relu')(x)
+    x = Dense(HIDDEN_DIMS, activation='relu')(x)
 
     preds = Dense(units=1, activation='sigmoid')(x)
 
@@ -117,25 +163,23 @@ def get_embeddings_index():
     return embeddings_index
 
 
-def get_word_index(texts, labels):
+def get_word_index(texts):
     """
     vectorize the text samples into a 2D integer tensor
     :param texts:
     :return:
     """
-    tokenizer = Tokenizer(num_words=MAX_NUM_WORDS)
-    tokenizer.fit_on_texts(texts)
-    sequences = tokenizer.texts_to_sequences(texts)
+    sentence = ''
+    for text in texts:
+        sentence = sentence+text
+        # seg_list = jieba.cut(text, cut_all=False)
+        # output = ' '.join(list(seg_list))
+    tags = jieba.analyse.extract_tags(sentence, topK=10, withWeight=False, allowPOS=())
+    d1 = {}
+    for i,tag in enumerate(tags):
+        d1[tag]=i+1
 
-    word_index = tokenizer.word_index
-    print('Found %s unique tokens.' % len(word_index))
-
-    data = pad_sequences(sequences, maxlen=MAX_SEQUENCE_LENGTH)
-    labels = to_categorical(np.asarray(labels))
-
-    print('Shape of data tensor:', data.shape)
-    print('Shape of label tensor:', labels.shape)
-    return word_index, labels
+    return d1
 
 
 def get_embedding_matrix(embeddings_index, word_index):
