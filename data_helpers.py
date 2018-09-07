@@ -22,13 +22,21 @@ import urllib
 import pandas as pd
 import numpy as np
 
+# label_index = {'恐怖':1,'暴力':2,'脏话':3,'自杀':4,'色情':5}
+label_index = {'恐怖': 1, '正常': 0}
 
-url = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search' \
-      '?fields=id,wcaption&filters=EQS_resourceState,4|EQS_newsLabel,%E6%81%90%E6%80%96' \
-      '&pagestart=1&fetchsize=15'
+url_1 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search' \
+        '?fields=id,wcaption&filters=EQS_resourceState,4' \
+        '|EQS_newsLabel,%E6%81%90%E6%80%96&pagestart=1&fetchsize=10'
 
-with urllib.request.urlopen(url) as response:
-    json_data = response.read()
+url_0 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01276/search' \
+        '?fields=id,wcaption&filters=EQS_ifCompare,1|EQS_resourceState,4|&orders=wpubTime_desc' \
+        '&pagestart=1&fetchsize=10'
 
-df = pd.DataFrame(pd.read_json(json_data))
+with urllib.request.urlopen(url_1) as response:
+    json1= response.read()
+df1 = pd.DataFrame(pd.read_json(json1))
 
+with urllib.request.urlopen(url_0) as response:
+    json0= response.read()
+df0 = pd.DataFrame(pd.read_json(json0))
