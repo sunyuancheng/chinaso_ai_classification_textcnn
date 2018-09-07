@@ -21,6 +21,7 @@
 import urllib
 import pandas as pd
 import numpy as np
+import json
 
 # label_index = {'恐怖':1,'暴力':2,'脏话':3,'自杀':4,'色情':5}
 label_index = {'恐怖': 1, '正常': 0}
@@ -30,13 +31,37 @@ url_1 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search'
         '|EQS_newsLabel,%E6%81%90%E6%80%96&pagestart=1&fetchsize=10'
 
 url_0 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01276/search' \
-        '?fields=id,wcaption&filters=EQS_ifCompare,1|EQS_resourceState,4|&orders=wpubTime_desc' \
+        '?fields=id,wcaption&filters=EQS_ifCompare,1|EQS_resourceState,4|EQS_newsLabelSecond,' \
+        '%E6%97%B6%E6%94%BF%E6%BB%9A%E5%8A%A8&orders=wpubTime_desc' \
         '&pagestart=1&fetchsize=10'
 
-with urllib.request.urlopen(url_1) as response:
-    json1= response.read()
-df1 = pd.DataFrame(pd.read_json(json1))
+
+def get_x1():
+    x1 = []
+    with urllib.request.urlopen(url_1) as response:
+        resp = response.read()
+        j1 = json.loads(resp)
+        results = j1['value']
+    for result in results:
+        label = '1'
+        x = result.get('wcaption')
+        x1.append(x + '&&&' + '1')
+    return x1
+
+def get_x0():
+    x0 = []
+    with urllib.request.urlopen(url_0) as response:
+        resp = response.read()
+        j0 = json.loads(resp)
+        results = j0['value']
+    for result in results:
+        label = '1'
+        x = result.get('wcaption')
+        x0.append(x + '&&&' + '0')
+    return x0
+
+
 
 with urllib.request.urlopen(url_0) as response:
-    json0= response.read()
+    json0 = response.read()
 df0 = pd.DataFrame(pd.read_json(json0))
