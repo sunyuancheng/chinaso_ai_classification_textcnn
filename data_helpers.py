@@ -42,11 +42,17 @@ URL_0 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search'
 
 # 数据保存地址
 BASE_DIR = '/data0/search/textcnn/data/'
-DATA_1 = os.path.join(BASE_DIR, 'data_1.txt')
-DATA_0 = os.path.join(BASE_DIR, 'data_0.txt')
-SEG_DATA = os.path.join(BASE_DIR, 'seg_data.csv')
-WORD_INDEX = os.path.join(BASE_DIR, 'word_index.csv')
-NUMERIC_DATA = os.path.join(BASE_DIR, 'numeric_data.csv')
+DATA_1 = os.path.join(BASE_DIR, 'data_1.txt')  # 正例语料
+DATA_0 = os.path.join(BASE_DIR, 'data_0.txt')  # 反例语料
+SEG_DATA = os.path.join(BASE_DIR, 'seg_data.csv')  # 分词后数据
+WORD_INDEX = os.path.join(BASE_DIR, 'word_index.csv')  # word_index
+NUMERIC_DATA = os.path.join(BASE_DIR, 'numeric_data.csv')  # 序号化后数据
+WORD2VEC = os.path.join(BASE_DIR, 'sgns.merge.bigram')  # word2vec词典地址
+EMBEDDING_MATRIX = os.path.join(BASE_DIR, 'embedding_matrix.npy')  # embedding_matrix
+
+# 超参
+EMBEDDING_DIM = 300  # 词向量维数
+MAX_NUM_WORDS = 157000  # 词典最大词数，若语料中含词数超过该数，则取前MAX_NUM_WORDS个
 
 # 分隔符
 SEG_SPLITTER = ' '
@@ -63,6 +69,8 @@ def pre_process(skip_download=False):
     3 合并正例反例，打乱顺序，并保存结果至csv:SEG_DATA
     4 获取word_index，并保存结果至csv:WORD_INDEX
     5 语料数字化：将分词列表替换成序号列表，并保存结果至csv:NUMERIC_DATA
+    6 获取embeddings_index（加载预训练好的word2vec词典）
+    7 通过获取embeddings_index以及word_index，生成embedding_matrix
     :return:
     """
     # 如果需要下载，通过接口下载数据，并保存结果至csv
@@ -103,9 +111,48 @@ def pre_process(skip_download=False):
     numeric_data.to_csv(NUMERIC_DATA, encoding='utf-8')
     print('word2index and save to ' + NUMERIC_DATA)
 
+    # 获取embeddings_index（加载预训练好的word2vec词典）
+    embeddings_index = get_embeddings_index()
 
-def test():
-    pass
+    # 通过获取embeddings_index以及word_index，生成embedding_matrix
+    embedding_matrix = generate_embedding_matrix(embeddings_index)
+    np.save(EMBEDDING_MATRIX, embedding_matrix)
+
+
+def get_embeddings_index():
+    """
+    加载预训练word2vec模型，返回字典embeddings_index
+    :return: embeddings_index
+    """
+    embeddings_index = {}
+    with open(WORD2VEC) as f:
+        for line in f:
+            values = line.split()
+            word = values[0]
+            coefs = np.asarray(values[1:], dtype='float32')
+            embeddings_index[word] = coefs
+    print('Found %s word vectors.' % len(embeddings_index))
+    return embeddings_index
+
+
+def generate_embedding_matrix(embeddings_index):
+    """
+    prepare embedding matrix
+    使用embeddings_index，word_index生成预训练矩阵embedding_matrix。
+    :param embeddings_index:
+    :param word_index:
+    :return:
+    """
+    num_words = min(MAX_NUM_WORDS, len(word_index) + 1)
+    embedding_matrix = np.zeros((num_words, EMBEDDING_DIM))
+    for word, i in word_index.items():
+        if i >= MAX_NUM_WORDS:
+            continue
+        embedding_vector = embeddings_index.get(word)
+        if embedding_vector is not None:
+            # words not found in embedding index will be all-zeros.
+            embedding_matrix[i] = embedding_vector
+    return embedding_matrix
 
 
 def word2index(tokens):
