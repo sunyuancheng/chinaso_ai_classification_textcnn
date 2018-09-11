@@ -33,10 +33,7 @@ import jieba
 
 # Word2Vec source, data source
 BASE_DIR = '/data0/search/textcnn/data/'
-WORD2VEC = os.path.join(BASE_DIR, 'sgns.merge.bigram')  # 词典地址
-DATA_1_SEG = os.path.join(BASE_DIR, 'data_1_seg.csv')
-DATA_0_SEG = os.path.join(BASE_DIR, 'data_0_seg.csv')
-WORD_INDEX = os.path.join(BASE_DIR, 'word_index.csv')
+EMBEDDING_MATRIX = os.path.join(BASE_DIR, 'embedding_matrix.npy')  # embedding_matrix
 
 # Model Hyperparameters
 EMBEDDING_DIM = 300  # 词向量维数
@@ -51,11 +48,11 @@ BATCH_SIZE = 64
 NUM_EPOCHS = 10
 
 # Prepossessing parameters
-MAX_NUM_WORDS = 200000  # 词典最大词数，若语料中含词数超过该数，则取前MAX_NUM_WORDS个
+MAX_NUM_WORDS = 157000  # 词典最大词数，若语料中含词数超过该数，则取前MAX_NUM_WORDS个
 MAX_SEQUENCE_LENGTH = 2000  # 每篇文章最长词数
 
 
-def text_cnn(word_index,embedding_matrix):
+def text_cnn():
     """
     构建text_cnn模型
     :return:
@@ -66,10 +63,10 @@ def text_cnn(word_index,embedding_matrix):
     # Embeddings layers
     # load pre-trained word embeddings into an Embedding layer
     # note that we set trainable = False so as to keep the embeddings fixed
-    embeddings_index = get_embeddings_index()
+    # embeddings_index = get_embeddings_index()
     word_index = get_word_index()
     num_words = min(MAX_NUM_WORDS, len(word_index) + 1)
-    embedding_matrix = get_embedding_matrix(embeddings_index, word_index)
+    embedding_matrix = np.load(EMBEDDING_MATRIX)
     embedding_layer = Embedding(num_words,
                                 EMBEDDING_DIM,
                                 embeddings_initializer=Constant(embedding_matrix),
@@ -101,21 +98,6 @@ def text_cnn(word_index,embedding_matrix):
     return model
 
 
-def get_embeddings_index():
-    """
-    加载预训练word2vec模型，返回字典embeddings_index
-    :return: embeddings_index
-    """
-    embeddings_index = {}
-    with open(WORD2VEC) as f:
-        for line in f:
-            values = line.split()
-            word = values[0]
-            coefs = np.asarray(values[1:], dtype='float32')
-            embeddings_index[word] = coefs
-    print('Found %s word vectors.' % len(embeddings_index))
-    return embeddings_index
-
 
 def get_word_index():
     """
@@ -144,25 +126,6 @@ def test_get_word_index(texts):
 
     return d1
 
-
-def get_embedding_matrix(embeddings_index, word_index):
-    """
-    prepare embedding matrix
-    使用embeddings_index，word_index生成预训练矩阵embedding_matrix。
-    :param embeddings_index:
-    :param word_index:
-    :return:
-    """
-    num_words = min(MAX_NUM_WORDS, len(word_index) + 1)
-    embedding_matrix = np.zeros((num_words, EMBEDDING_DIM))
-    for word, i in word_index.items():
-        if i >= MAX_NUM_WORDS:
-            continue
-        embedding_vector = embeddings_index.get(word)
-        if embedding_vector is not None:
-            # words not found in embedding index will be all-zeros.
-            embedding_matrix[i] = embedding_vector
-    return embedding_matrix
 
 
 def pre_process():
