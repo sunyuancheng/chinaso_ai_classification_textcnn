@@ -32,9 +32,11 @@ import pandas as pd
 import jieba
 
 # Word2Vec source, data source
-BASE_DIR = "/application/search/ming"
-WORD2VEC_DIR = os.path.join(BASE_DIR, 'sgns.merge.bigram')  # 词典地址
-TEXT_DATA_DIR = os.path.join(BASE_DIR, '20_newsgroup')  # 数据地址
+BASE_DIR = '/data0/search/textcnn/data/'
+WORD2VEC = os.path.join(BASE_DIR, 'sgns.merge.bigram')  # 词典地址
+DATA_1_SEG = os.path.join(BASE_DIR, 'data_1_seg.csv')
+DATA_0_SEG = os.path.join(BASE_DIR, 'data_0_seg.csv')
+WORD_INDEX = os.path.join(BASE_DIR, 'word_index.csv')
 
 # Model Hyperparameters
 EMBEDDING_DIM = 300  # 词向量维数
@@ -52,51 +54,6 @@ NUM_EPOCHS = 10
 MAX_NUM_WORDS = 20000  # 词典最大词数，若语料中含词数超过该数，则取前MAX_NUM_WORDS个
 MAX_SEQUENCE_LENGTH = 2000  # 每篇文章最长词数
 
-
-# def text_cnn():
-#     """
-#     构建text_cnn模型
-#     :return:
-#     """
-#     # Inputs
-#     sequence_input = Input(shape=(MAX_SEQUENCE_LENGTH,), dtype='int32')
-#
-#     # Embeddings layers
-#     # load pre-trained word embeddings into an Embedding layer
-#     # note that we set trainable = False so as to keep the embeddings fixed
-#     embeddings_index = get_embeddings_index()
-#     word_index = get_word_index(texts)
-#     num_words = min(MAX_NUM_WORDS, len(word_index) + 1)
-#     embedding_matrix = get_embedding_matrix(embeddings_index, word_index)
-#     embedding_layer = Embedding(num_words,
-#                                 EMBEDDING_DIM,
-#                                 embeddings_initializer=Constant(embedding_matrix),
-#                                 input_length=MAX_SEQUENCE_LENGTH,
-#                                 trainable=False)
-#     embedded_sequences = embedding_layer(sequence_input)
-#
-#     # conv layers
-#     convs = []
-#     for filter_size in FILTER_SIZES:
-#         l_conv = Conv1D(filters=NUM_FILTERS,
-#                         kernel_size=filter_size,
-#                         activation='relu')(embedded_sequences)
-#         l_pool = MaxPooling1D(MAX_SEQUENCE_LENGTH - filter_size + 1)(l_conv)
-#         l_pool = Flatten()(l_pool)
-#         convs.append(l_pool)
-#     merge = concatenate(convs, axis=1)
-#
-#     x = Dropout(DROPOUT_RATE)(merge)
-#     x = Dense(32, activation='relu')(x)
-#
-#     preds = Dense(units=1, activation='sigmoid')(x)
-#
-#     model = Model(sequence_input, preds)
-#     model.compile(loss="categorical_crossentropy",
-#                   optimizer="rmsprop",
-#                   metrics=['acc'])
-#
-#     return model
 
 def text_cnn(word_index,embedding_matrix):
     """
@@ -137,9 +94,9 @@ def text_cnn(word_index,embedding_matrix):
     preds = Dense(units=1, activation='sigmoid')(x)
 
     model = Model(sequence_input, preds)
-    model.compile(loss="categorical_crossentropy",
-                  optimizer="rmsprop",
-                  metrics=['acc'])
+    model.compile(loss="binary_crossentropy",
+                  optimizer="adam",
+                  metrics=['accuracy'])
 
     return model
 
@@ -150,7 +107,7 @@ def get_embeddings_index():
     :return: embeddings_index
     """
     embeddings_index = {}
-    with open(WORD2VEC_DIR) as f:
+    with open(WORD2VEC) as f:
         for line in f:
             values = line.split()
             word = values[0]
@@ -160,7 +117,16 @@ def get_embeddings_index():
     return embeddings_index
 
 
-def get_word_index(texts):
+def get_word_index():
+    """
+    加载计算好的word_index
+    :return:
+    """
+    df = pd.read_csv(WORD_INDEX)
+
+
+
+def test_get_word_index(texts):
     """
     vectorize the text samples into a 2D integer tensor
     :param texts:
@@ -253,35 +219,6 @@ def get_texts_and_labels():
                     labels.append(label_id)
     print('Found %s texts.' % len(texts))
     return texts, labels_index, labels
-
-
-# def text_cnn(maxlen=150, max_features=2000, embed_size=32):
-#     # Inputs
-#     comment_seq = Input(shape=[maxlen], name='x_seq')
-#
-#     # Embeddings layers
-#     emb_comment = Embedding(max_features, embed_size)(comment_seq)
-#
-#     # conv layers
-#     convs = []
-#     filter_sizes = [2, 3, 4, 5]
-#     for fsz in filter_sizes:
-#         l_conv = Conv1D(filters=100, kernel_size=fsz, activation='relu')(emb_comment)
-#         l_pool = MaxPooling1D(maxlen - fsz + 1)(l_conv)
-#         l_pool = Flatten()(l_pool)
-#         convs.append(l_pool)
-#     merge = concatenate(convs, axis=1)
-#
-#     out = Dropout(0.5)(merge)
-#     output = Dense(32, activation='relu')(out)
-#
-#     output = Dense(units=1, activation='sigmoid')(output)
-#
-#     model = Model([comment_seq], output)
-#     #     adam = optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
-#     model.compile(loss="binary_crossentropy", optimizer="adam", metrics=['accuracy'])
-#
-#     return model
 
 
 def text_to_index_array(word2vec_dict, text):  # 文本转为索引数字模式
