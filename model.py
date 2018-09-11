@@ -51,7 +51,7 @@ BATCH_SIZE = 64
 NUM_EPOCHS = 10
 
 # Prepossessing parameters
-MAX_NUM_WORDS = 20000  # 词典最大词数，若语料中含词数超过该数，则取前MAX_NUM_WORDS个
+MAX_NUM_WORDS = 200000  # 词典最大词数，若语料中含词数超过该数，则取前MAX_NUM_WORDS个
 MAX_SEQUENCE_LENGTH = 2000  # 每篇文章最长词数
 
 
@@ -66,10 +66,10 @@ def text_cnn(word_index,embedding_matrix):
     # Embeddings layers
     # load pre-trained word embeddings into an Embedding layer
     # note that we set trainable = False so as to keep the embeddings fixed
-    # embeddings_index = get_embeddings_index()
-    # word_index = get_word_index(texts)
+    embeddings_index = get_embeddings_index()
+    word_index = get_word_index()
     num_words = min(MAX_NUM_WORDS, len(word_index) + 1)
-    # embedding_matrix = get_embedding_matrix(embeddings_index, word_index)
+    embedding_matrix = get_embedding_matrix(embeddings_index, word_index)
     embedding_layer = Embedding(num_words,
                                 EMBEDDING_DIM,
                                 embeddings_initializer=Constant(embedding_matrix),
