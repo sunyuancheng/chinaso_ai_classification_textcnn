@@ -102,8 +102,8 @@ def pre_process(skip_download=False):
     print('getting word_index and save to ' + WORD_INDEX)
 
     # 语料数字化：将分词列表替换成序号列表，并保存结果至csv:NUMERIC_DATA
-    seg_data['indices'] = seg_data['tokens'].map(word2index)
-    numeric_data = seg_data[['indices', 'label']]
+    seg_data['indexes'] = seg_data['tokens'].map(word2index)
+    numeric_data = seg_data[['indexes', 'label']]
     numeric_data.to_csv(NUMERIC_DATA, encoding='utf-8')
     print('word2index and save to ' + NUMERIC_DATA)
 
