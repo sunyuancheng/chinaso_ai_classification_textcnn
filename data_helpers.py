@@ -120,11 +120,11 @@ def word2index(tokens):
     """
     l1 = tokens.split(SEG_SPLITTER)
     l2 = [x for x in l1 if x is not None]  # 去分词列表的非空部分
-    indecis = []
+    indexes = []
     for one in l2:
         if one in word_index.keys():
-            indecis.append(str(word_index[one]))
-    return SEG_SPLITTER.join(indecis).strip()
+            indexes.append(str(word_index[one]))
+    return SEG_SPLITTER.join(indexes).strip()
 
 
 def segment(df):
