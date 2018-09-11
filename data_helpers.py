@@ -76,7 +76,6 @@ def pre_process(skip_download=False):
     d1['label'] = 1
     d1['tokens'] = d1['doc'].map(lambda x: ' '.join(jieba.cut(x, cut_all=False)))
     d1 = d1[['tokens', 'label']]
-    # d1.to_csv(DATA_1_SEG, encoding='utf-8')
     print('data 1 segmentation')
 
     # 处理反例数据，分词
@@ -84,7 +83,6 @@ def pre_process(skip_download=False):
     d0['label'] = 0
     d0['tokens'] = d0['doc'].map(lambda x: ' '.join(jieba.cut(x, cut_all=False)))
     d0 = d0[['tokens', 'label']]
-    # d0.to_csv(DATA_0_SEG, encoding='utf-8')
     print('data 0 segmentation')
 
     # 合并正例反例，打乱顺序，并保存结果至csv:SEG_DATA
@@ -95,8 +93,6 @@ def pre_process(skip_download=False):
 
     # 获取word_index，并保存结果至csv:WORD_INDEX
     word_index = get_word_index(d0, d1)
-    # df_word_index = DataFrame(word_index, columns=['word', 'index'])
-    # df_word_index.to_csv(WORD_INDEX, encoding='utf-8')
     word_index_df = DataFrame(list(word_index.items()), columns=['word', 'index'])
     word_index_df.to_csv(WORD_INDEX, encoding='utf-8')
     print('getting word_index and save to ' + WORD_INDEX)
