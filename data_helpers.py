@@ -24,6 +24,7 @@ import numpy as np
 from pandas.core.frame import DataFrame
 import json
 import jieba
+import os
 
 # label_index = {'恐怖':1,'暴力':2,'脏话':3,'自杀':4,'色情':5}
 label_index = {'恐怖': 1, '正常': 0}
@@ -39,64 +40,54 @@ URL_0 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search'
         '?fields=id,wcaption&filters=EQS_resourceState,4' \
         '|EQS_newsLabel,%E6%81%90%E6%80%96&pagestart=1&fetchsize=10000'
 
-DATA_1 = '/application/search/ming/data_1.txt'
-DATA_0 = '/application/search/ming/data_0.txt'
-DATA_1_SEG = '/application/search/ming/data_1_seg.txt'
-DATA_0_SEG = '/application/search/ming/data_0_seg.txt'
+# 数据保存地址
+BASE_DIR = '/application/search/ming/'
+DATA_1 = os.path.join(BASE_DIR, 'data_1.txt')
+DATA_0 = os.path.join(BASE_DIR, 'data_0.txt')
+DATA_1_SEG = os.path.join(BASE_DIR, 'data_1_seg.csv')
+DATA_0_SEG = os.path.join(BASE_DIR, 'data_0_seg.csv')
+WORD_INDEX = os.path.join(BASE_DIR, 'word_index.csv')
 
 
-def get1():
-    x1 = []
-    with urllib.request.urlopen(URL_1) as response:
-        resp = response.read()
-        j1 = json.loads(resp)
-        results = j1['value']
-        for result in results:
-            x = result.get('wcaption').replace(',', '，')
-            x1.append(x)
-    df1 = DataFrame(columns=['doc'], data=x1)
-    df1['label'] = 1
-    return df1
+def pre_process():
+    """
+    数据预处理。具体步骤如下：
+    1 通过接口获取数据，保存至文件。
+    2 分词，获取词典word_index。
+    :return:
+    """
+    # 通过接口下载数据
+    get_data_0_from_api()
+    get_data_1_from_api()
 
 
-def get0():
-    x0 = []
-    with urllib.request.urlopen(URL_0) as response:
-        resp = response.read()
-        j0 = json.loads(resp)
-        results = j0['value']
-        for result in results:
-            x = result.get('wcaption').replace(',', '，')
-            x0.append(x)
-    df0 = DataFrame(columns=['doc'], data=x0)
-    df0['label'] = 0
-    return df0
+    # 处理数据，分词
+    d1 = pd.read_csv(DATA_1, header=None, names=['doc'])
+    d1['label'] = 1
+    d1['tokens'] = d1['doc'].map(lambda x: ' '.join(jieba.cut(x, cut_all=False)))
+
+    d0 = pd.read_csv(DATA_1, header=None, names=['doc'])
+    d0['label'] = 0
+    d0['tokens'] = d0['doc'].map(lambda x: ' '.join(jieba.cut(x, cut_all=False)))
+
+    # 获取word_index
+    word_index = get_word_index(d0, d1)
 
 
 def segment(df):
+    """
+    将正文doc分词，保存于tokens。返回tokens,label
+    :param df:
+    :return:
+    """
     df['tokens'] = df['doc'].map(lambda x: ' '.join(jieba.cut(x, cut_all=False)))
     return df[['tokens', 'label']]
 
 
-def test_analyse():
-    from collections import Counter
-    import jieba.analyse
-    import time
-
-    bill_path = r'bill.txt'
-    bill_result_path = r'bill_result.txt'
-    car_path = 'car.txt'
-    with open(bill_path, 'r') as fr:
-        data = jieba.cut(fr.read())
-    data = dict(Counter(data))
-    with open(bill_result_path, 'w') as fw:
-        for k, v in data.items():
-            fw.write("%s,%d\n" % (k.encode('utf-8'), v))
-
-
-def get_data_0():
+def get_data_0_from_api():
     """
     通过接口获得反例数据，并保存至文件
+    含有简单文本过滤，并替换CSV文件分隔符：英文逗号
     :return:
     """
     with open(DATA_0, 'w') as f:
@@ -109,9 +100,10 @@ def get_data_0():
                 f.write(x + '\n')
 
 
-def get_data_1():
+def get_data_1_from_api():
     """
     通过接口获取正例数据，并保存至文件
+    含有简单文本过滤，并替换CSV文件分隔符：英文逗号
     :return:
     """
     with open(DATA_1, 'w') as f:
@@ -124,29 +116,24 @@ def get_data_1():
                 f.write(x + '\n')
 
 
-def get_data_0_seg():
-    with open(DATA_0, 'r') as f1:
-        with open(DATA_0_SEG, 'w') as f2:
-            lines = f1.readlines()
-            for line in lines:
-                output_line = ' '.join(jieba.cut(line, cut_all=False))
-                f2.write(output_line + '\n')
-
-
 def test_get_tfidf():
+    """
+    测试jieba生成tfidf
+    :return:
+    """
     import jieba
     import jieba.analyse
 
     # text = "故宫的著名景点包括乾清宫、太和殿和午门等。其中乾清宫非常精美，午门是紫禁城的正门，午门居中向阳。"
     text = ''
     # jieba.load_userdict("jieba_dict.txt")  # 用户自定义词典 （用户可以自己在这个文本文件中，写好自定制词汇）
-    f = open('/application/search/ming/data_0_small.txt', 'r', encoding='utf8')  # 要进行分词处理的文本文件 (统统按照utf8文件去处理，省得麻烦)
+    f = open('DATA_0', 'r', encoding='utf8')  # 要进行分词处理的文本文件 (统统按照utf8文件去处理，省得麻烦)
     lines = f.readlines()
     for line in lines:
         text += line
 
     # seg_list = jieba.cut(text, cut_all=False)  #精确模式（默认是精确模式）
-    seg_list = jieba.cut(text, cut_all=False) # 精确模式（默认是精确模式）
+    # seg_list = jieba.cut(text, cut_all=False) # 精确模式（默认是精确模式）
     # print("[精确模式]: ", "/ ".join(seg_list))
 
     # seg_list2 = jieba.cut(text, cut_all=True)    #全模式
@@ -183,26 +170,28 @@ def get_word_index(d0,d1):
 
 
 def pre_process():
+    # 通过接口下载数据，保存结果至csv
+    get_data_0_from_api()
+    get_data_1_from_api()
+
+    # 处理数据，分词，并保存结果至csv
     d1 = pd.read_csv(DATA_1, header=None, names=['doc'])
     d1['label'] = 1
     d1['tokens'] = d1['doc'].map(lambda x: ' '.join(jieba.cut(x, cut_all=False)))
+    d1[['tokens','label']].to_csv(DATA_1_SEG, encoding='utf-8')
 
     d0 = pd.read_csv(DATA_1, header=None, names=['doc'])
     d0['label'] = 0
     d0['tokens'] = d0['doc'].map(lambda x: ' '.join(jieba.cut(x, cut_all=False)))
+    d0[['tokens', 'label']].to_csv(DATA_0_SEG, encoding='utf-8')
+
+    # 获取word_index，并保存结果至csv
+    word_index = get_word_index(d0, d1)
+    df_word_index = DataFrame(word_index,columns=['word','tf'])
+    df_word_index = df_word_index[['word']][1:]
+    df_word_index.to_csv(WORD_INDEX, encoding='utf-8')
 
 
 
 if __name__ == '__main__':
-    d1 = pd.read_csv(DATA_1, header=None, names=['doc'])
-    d1['label'] = 1
-    d1['tokens'] = d1['doc'].map(lambda x: ' '.join(jieba.cut(x, cut_all=False)))
-
-    d0 = pd.read_csv(DATA_1, header=None, names=['doc'])
-    d0['label'] = 0
-    d0['tokens'] = d0['doc'].map(lambda x: ' '.join(jieba.cut(x, cut_all=False)))
-
-    x1 = get1()
-    x1[['doc']].to_csv('/application/search/ming/x1.csv', encoding='utf-8')
-    x1_seg = segment(x1)
-    x1_seg.to_csv('/application/search/ming/x1_seg.csv', encoding='utf-8')
+    pre_process()
