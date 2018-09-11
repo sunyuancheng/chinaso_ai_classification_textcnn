@@ -19,15 +19,15 @@
 # limitations under the License.
 # ========================================================================
 import urllib
-import pandas as pd
 import numpy as np
+import pandas as pd
 from pandas.core.frame import DataFrame
 import json
 import jieba
 import os
 
-# label_index = {'恐怖':1,'暴力':2,'脏话':3,'自杀':4,'色情':5}
-label_index = {'恐怖': 1, '正常': 0}
+# LABEL_INDEX = {'恐怖':1,'暴力':2,'脏话':3,'自杀':4,'色情':5}
+LABEL_INDEX = {'恐怖': 1, '正常': 0}
 
 # 正例接口
 URL_1 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01276/search' \
@@ -52,14 +52,16 @@ WORD_INDEX = os.path.join(BASE_DIR, 'word_index.csv')
 def pre_process(skip_download=False):
     """
     数据预处理。具体步骤如下：
-    1 通过接口获取数据，保存至文件。
-    2 分词，获取词典word_index。
+    1 通过接口获取数据，保存结果至文件。
+    2 分词，保存分词结果至文件。
+    3 获取语料的词典word_index，保存结果至文件。
     :return:
     """
     # 如果需要下载，通过接口下载数据，保存结果至csv
     if not skip_download:
         get_data_0_from_api()
         get_data_1_from_api()
+        print('download finished')
 
     # 处理数据，分词，并保存结果至csv
     d1 = pd.read_csv(DATA_1, header=None, names=['doc'])
@@ -67,16 +69,21 @@ def pre_process(skip_download=False):
     d1['tokens'] = d1['doc'].map(lambda x: ' '.join(jieba.cut(x, cut_all=False)))
     d1[['tokens', 'label']].to_csv(DATA_1_SEG, encoding='utf-8')
 
-    d0 = pd.read_csv(DATA_1, header=None, names=['doc'])
+    d0 = pd.read_csv(DATA_0, header=None, names=['doc'])
     d0['label'] = 0
     d0['tokens'] = d0['doc'].map(lambda x: ' '.join(jieba.cut(x, cut_all=False)))
     d0[['tokens', 'label']].to_csv(DATA_0_SEG, encoding='utf-8')
+    print('segmentation finished')
 
     # 获取word_index，并保存结果至csv
     word_index = get_word_index(d0, d1)
     df_word_index = DataFrame(word_index, columns=['word', 'tf'])
     df_word_index = df_word_index[['word']][1:]
     df_word_index.to_csv(WORD_INDEX, encoding='utf-8')
+    print('getting word_index finished')
+
+    # 在分词过的数据中，将word转换成index
+    df = pd.read_csv(WORD_INDEX, index_col='word')
 
 
 def segment(df):
@@ -123,6 +130,34 @@ def get_data_1_from_api():
                 f.write(x + '\n')
 
 
+def get_word_index(d0, d1):
+    """
+    统计语料分词词典，按照词频由大到小排序
+    :param d0:
+    :param d1:
+    :return:
+    """
+    word_index = {}
+    for tokens in d0['tokens']:
+        words = tokens.split(' ')
+        for word in words:
+            if word in word_index.keys():
+                count = word_index[word]
+                word_index[word] = count + 1
+            else:
+                word_index[word] = 1
+    for tokens in d1['tokens']:
+        words = tokens.split(' ')
+        for word in words:
+            if word in word_index.keys():
+                count = word_index[word]
+                word_index[word] = count + 1
+            else:
+                word_index[word] = 1
+    word_index = sorted(word_index.items(), key=lambda x: x[1], reverse=True)
+    return word_index
+
+
 def test_jieba_extract_tags():
     """
     测试jieba生成tfidf关键词
@@ -152,34 +187,6 @@ def test_jieba_extract_tags():
     tags = jieba.analyse.extract_tags(text, topK=100, withWeight=True)
     # print("关键词:    ", " / ".join(tags))
     return tags
-
-
-def get_word_index(d0, d1):
-    """
-    统计语料分词词典，按照词频由大到小排序
-    :param d0:
-    :param d1:
-    :return:
-    """
-    word_index = {}
-    for tokens in d0['tokens']:
-        words = tokens.split(' ')
-        for word in words:
-            if word in word_index.keys():
-                count = word_index[word]
-                word_index[word] = count + 1
-            else:
-                word_index[word] = 1
-    for tokens in d1['tokens']:
-        words = tokens.split(' ')
-        for word in words:
-            if word in word_index.keys():
-                count = word_index[word]
-                word_index[word] = count + 1
-            else:
-                word_index[word] = 1
-    word_index = sorted(word_index.items(), key=lambda x: x[1], reverse=True)
-    return word_index
 
 
 if __name__ == '__main__':
