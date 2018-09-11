@@ -41,7 +41,7 @@ URL_0 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search'
         '|EQS_newsLabel,%E6%81%90%E6%80%96&pagestart=1&fetchsize=10000'
 
 # 数据保存地址
-BASE_DIR = '/application/search/ming/'
+BASE_DIR = '/data0/search/textcnn/data/'
 DATA_1 = os.path.join(BASE_DIR, 'data_1.txt')
 DATA_0 = os.path.join(BASE_DIR, 'data_0.txt')
 DATA_1_SEG = os.path.join(BASE_DIR, 'data_1_seg.csv')
@@ -49,29 +49,34 @@ DATA_0_SEG = os.path.join(BASE_DIR, 'data_0_seg.csv')
 WORD_INDEX = os.path.join(BASE_DIR, 'word_index.csv')
 
 
-def pre_process():
+def pre_process(skip_download=False):
     """
     数据预处理。具体步骤如下：
     1 通过接口获取数据，保存至文件。
     2 分词，获取词典word_index。
     :return:
     """
-    # 通过接口下载数据
-    get_data_0_from_api()
-    get_data_1_from_api()
+    # 如果需要下载，通过接口下载数据，保存结果至csv
+    if not skip_download:
+        get_data_0_from_api()
+        get_data_1_from_api()
 
-
-    # 处理数据，分词
+    # 处理数据，分词，并保存结果至csv
     d1 = pd.read_csv(DATA_1, header=None, names=['doc'])
     d1['label'] = 1
     d1['tokens'] = d1['doc'].map(lambda x: ' '.join(jieba.cut(x, cut_all=False)))
+    d1[['tokens', 'label']].to_csv(DATA_1_SEG, encoding='utf-8')
 
     d0 = pd.read_csv(DATA_1, header=None, names=['doc'])
     d0['label'] = 0
     d0['tokens'] = d0['doc'].map(lambda x: ' '.join(jieba.cut(x, cut_all=False)))
+    d0[['tokens', 'label']].to_csv(DATA_0_SEG, encoding='utf-8')
 
-    # 获取word_index
+    # 获取word_index，并保存结果至csv
     word_index = get_word_index(d0, d1)
+    df_word_index = DataFrame(word_index, columns=['word', 'tf'])
+    df_word_index = df_word_index[['word']][1:]
+    df_word_index.to_csv(WORD_INDEX, encoding='utf-8')
 
 
 def segment(df):
@@ -96,7 +101,9 @@ def get_data_0_from_api():
             j1 = json.loads(resp)
             results = j1['value']
             for result in results:
-                x = result.get('wcaption').replace(',', '，').replace('免费订阅精彩鬼故事，微信号：guidayecom', '')
+                x = result.get('wcaption') \
+                    .replace(',', '，') \
+                    .replace('免费订阅精彩鬼故事，微信号：guidayecom', '')
                 f.write(x + '\n')
 
 
@@ -116,9 +123,9 @@ def get_data_1_from_api():
                 f.write(x + '\n')
 
 
-def test_get_tfidf():
+def test_jieba_extract_tags():
     """
-    测试jieba生成tfidf
+    测试jieba生成tfidf关键词
     :return:
     """
     import jieba
@@ -127,7 +134,7 @@ def test_get_tfidf():
     # text = "故宫的著名景点包括乾清宫、太和殿和午门等。其中乾清宫非常精美，午门是紫禁城的正门，午门居中向阳。"
     text = ''
     # jieba.load_userdict("jieba_dict.txt")  # 用户自定义词典 （用户可以自己在这个文本文件中，写好自定制词汇）
-    f = open('DATA_0', 'r', encoding='utf8')  # 要进行分词处理的文本文件 (统统按照utf8文件去处理，省得麻烦)
+    f = open(DATA_0, 'r', encoding='utf8')  # 要进行分词处理的文本文件 (统统按照utf8文件去处理，省得麻烦)
     lines = f.readlines()
     for line in lines:
         text += line
@@ -147,51 +154,33 @@ def test_get_tfidf():
     return tags
 
 
-def get_word_index(d0,d1):
-    word_index={}
+def get_word_index(d0, d1):
+    """
+    统计语料分词词典，按照词频由大到小排序
+    :param d0:
+    :param d1:
+    :return:
+    """
+    word_index = {}
     for tokens in d0['tokens']:
-        words=tokens.split(' ')
+        words = tokens.split(' ')
         for word in words:
             if word in word_index.keys():
                 count = word_index[word]
-                word_index[word] = count+1
+                word_index[word] = count + 1
             else:
                 word_index[word] = 1
     for tokens in d1['tokens']:
-        words=tokens.split(' ')
+        words = tokens.split(' ')
         for word in words:
             if word in word_index.keys():
                 count = word_index[word]
-                word_index[word] = count+1
+                word_index[word] = count + 1
             else:
                 word_index[word] = 1
     word_index = sorted(word_index.items(), key=lambda x: x[1], reverse=True)
     return word_index
 
 
-def pre_process():
-    # 通过接口下载数据，保存结果至csv
-    get_data_0_from_api()
-    get_data_1_from_api()
-
-    # 处理数据，分词，并保存结果至csv
-    d1 = pd.read_csv(DATA_1, header=None, names=['doc'])
-    d1['label'] = 1
-    d1['tokens'] = d1['doc'].map(lambda x: ' '.join(jieba.cut(x, cut_all=False)))
-    d1[['tokens','label']].to_csv(DATA_1_SEG, encoding='utf-8')
-
-    d0 = pd.read_csv(DATA_1, header=None, names=['doc'])
-    d0['label'] = 0
-    d0['tokens'] = d0['doc'].map(lambda x: ' '.join(jieba.cut(x, cut_all=False)))
-    d0[['tokens', 'label']].to_csv(DATA_0_SEG, encoding='utf-8')
-
-    # 获取word_index，并保存结果至csv
-    word_index = get_word_index(d0, d1)
-    df_word_index = DataFrame(word_index,columns=['word','tf'])
-    df_word_index = df_word_index[['word']][1:]
-    df_word_index.to_csv(WORD_INDEX, encoding='utf-8')
-
-
-
 if __name__ == '__main__':
-    pre_process()
+    pre_process(skip_download=True)
