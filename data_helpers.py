@@ -44,46 +44,87 @@ URL_0 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search'
 BASE_DIR = '/data0/search/textcnn/data/'
 DATA_1 = os.path.join(BASE_DIR, 'data_1.txt')
 DATA_0 = os.path.join(BASE_DIR, 'data_0.txt')
-DATA_1_SEG = os.path.join(BASE_DIR, 'data_1_seg.csv')
-DATA_0_SEG = os.path.join(BASE_DIR, 'data_0_seg.csv')
+SEG_DATA = os.path.join(BASE_DIR, 'seg_data.csv')
 WORD_INDEX = os.path.join(BASE_DIR, 'word_index.csv')
+NUMERIC_DATA = os.path.join(BASE_DIR, 'numeric_data.csv')
+
+# 分隔符
+SEG_SPLITTER = ' '
+# CSV_SPLITTER = ','
+
+word_index = {}
 
 
 def pre_process(skip_download=False):
     """
     数据预处理。具体步骤如下：
-    1 通过接口获取数据，保存结果至文件。
-    2 分词，保存分词结果至文件。
-    3 获取语料的词典word_index，保存结果至文件。
+    1 如果需要下载，通过接口下载数据，并保存结果至csv
+    2 处理正例反例数据，分词
+    3 合并正例反例，打乱顺序，并保存结果至csv:SEG_DATA
+    4 获取word_index，并保存结果至csv:WORD_INDEX
+    5 语料数字化：将分词列表替换成序号列表，并保存结果至csv:NUMERIC_DATA
     :return:
     """
-    # 如果需要下载，通过接口下载数据，保存结果至csv
+    # 如果需要下载，通过接口下载数据，并保存结果至csv
     if not skip_download:
         get_data_0_from_api()
         get_data_1_from_api()
-        print('download finished')
+        print('download and save to ' + DATA_0 + ',' + DATA_1)
 
-    # 处理数据，分词，并保存结果至csv
+    # 处理正例数据，分词
     d1 = pd.read_csv(DATA_1, header=None, names=['doc'])
     d1['label'] = 1
     d1['tokens'] = d1['doc'].map(lambda x: ' '.join(jieba.cut(x, cut_all=False)))
-    d1[['tokens', 'label']].to_csv(DATA_1_SEG, encoding='utf-8')
+    d1 = d1[['tokens', 'label']]
+    # d1.to_csv(DATA_1_SEG, encoding='utf-8')
+    print('data 1 segmentation')
 
+    # 处理反例数据，分词
     d0 = pd.read_csv(DATA_0, header=None, names=['doc'])
     d0['label'] = 0
     d0['tokens'] = d0['doc'].map(lambda x: ' '.join(jieba.cut(x, cut_all=False)))
-    d0[['tokens', 'label']].to_csv(DATA_0_SEG, encoding='utf-8')
-    print('segmentation finished')
+    d0 = d0[['tokens', 'label']]
+    # d0.to_csv(DATA_0_SEG, encoding='utf-8')
+    print('data 0 segmentation')
 
-    # 获取word_index，并保存结果至csv
+    # 合并正例反例，打乱顺序，并保存结果至csv:SEG_DATA
+    seg_data = d1.append(d0, ignore_index=True)
+    # seg_data = seg_data.sample(frac=1)
+    seg_data.to_csv(SEG_DATA, encoding='utf-8')
+    print('segmentation and save to ' + SEG_DATA)
+
+    # 获取word_index，并保存结果至csv:WORD_INDEX
     word_index = get_word_index(d0, d1)
-    df_word_index = DataFrame(word_index, columns=['word', 'tf'])
-    df_word_index = df_word_index[['word']][1:]
-    df_word_index.to_csv(WORD_INDEX, encoding='utf-8')
-    print('getting word_index finished')
+    # df_word_index = DataFrame(word_index, columns=['word', 'index'])
+    # df_word_index.to_csv(WORD_INDEX, encoding='utf-8')
+    word_index_df = DataFrame(list(word_index.items()), columns=['word', 'index'])
+    word_index_df.to_csv(WORD_INDEX, encoding='utf-8')
+    print('getting word_index and save to ' + WORD_INDEX)
 
-    # 在分词过的数据中，将word转换成index
-    df = pd.read_csv(WORD_INDEX, index_col='word')
+    # 语料数字化：将分词列表替换成序号列表，并保存结果至csv:NUMERIC_DATA
+    seg_data['indices'] = seg_data['tokens'].map(word2index)
+    numeric_data = seg_data[['indices', 'label']]
+    numeric_data.to_csv(NUMERIC_DATA, encoding='utf-8')
+    print('word2index and save to ' + NUMERIC_DATA)
+
+
+def test():
+    pass
+
+
+def word2index(tokens):
+    """
+    将输入的tokens转换成word_index中的序号
+    :param tokens:
+    :return:
+    """
+    l1 = tokens.split(SEG_SPLITTER)
+    l2 = [x for x in l1 if x is not None]  # 去分词列表的非空部分
+    indecis = []
+    for one in l2:
+        if one in word_index.keys():
+            indecis.append(str(word_index[one]))
+    return SEG_SPLITTER.join(indecis).strip()
 
 
 def segment(df):
@@ -92,7 +133,7 @@ def segment(df):
     :param df:
     :return:
     """
-    df['tokens'] = df['doc'].map(lambda x: ' '.join(jieba.cut(x, cut_all=False)))
+    df['tokens'] = df['doc'].map(lambda x: SEG_SPLITTER.join(jieba.cut(x, cut_all=False)))
     return df[['tokens', 'label']]
 
 
@@ -126,7 +167,9 @@ def get_data_1_from_api():
             j1 = json.loads(resp)
             results = j1['value']
             for result in results:
-                x = result.get('wcaption').replace(',', '，')
+                x = result.get('wcaption') \
+                    .replace(',', '，') \
+                    .replace('|', '')
                 f.write(x + '\n')
 
 
@@ -138,23 +181,28 @@ def get_word_index(d0, d1):
     :return:
     """
     word_index = {}
+    word_dict = {}
     for tokens in d0['tokens']:
-        words = tokens.split(' ')
+        words = tokens.split(SEG_SPLITTER)
         for word in words:
-            if word in word_index.keys():
-                count = word_index[word]
-                word_index[word] = count + 1
+            if word in word_dict.keys():
+                count = word_dict[word]
+                word_dict[word] = count + 1
             else:
-                word_index[word] = 1
+                word_dict[word] = 1
     for tokens in d1['tokens']:
-        words = tokens.split(' ')
+        words = tokens.split(SEG_SPLITTER)
         for word in words:
-            if word in word_index.keys():
-                count = word_index[word]
-                word_index[word] = count + 1
+            if word in word_dict.keys():
+                count = word_dict[word]
+                word_dict[word] = count + 1
             else:
-                word_index[word] = 1
-    word_index = sorted(word_index.items(), key=lambda x: x[1], reverse=True)
+                word_dict[word] = 1
+    word_dict = sorted(word_dict.items(), key=lambda x: x[1], reverse=True)
+    word_dict = word_dict[1:]  # 去除空字符
+    for i, word in enumerate(word_dict):
+        w = word[0]
+        word_index[w] = i + 1
     return word_index
 
 
