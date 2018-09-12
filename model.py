@@ -186,4 +186,4 @@ if __name__ == "__main__":
     scores = model.evaluate(x_test, y_test)
     print('test_loss: %f, accuracy: %f' % (scores[0], scores[1]))
 
-    model.save(MODEL)
+    # model.save(MODEL)
