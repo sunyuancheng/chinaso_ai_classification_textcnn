@@ -65,12 +65,13 @@ def pre_process(skip_download=False):
     """
     数据预处理。具体步骤如下：
     1 如果需要下载，通过接口下载数据，并保存结果至csv
-    2 处理正例反例数据，分词
-    3 合并正例反例，打乱顺序，并保存结果至csv:SEG_DATA
+    2 处理正例反例数据，添加标签
+    3 合并正例反例，分词，打乱顺序，并保存结果至csv:SEG_DATA
     4 获取word_index，并保存结果至csv:WORD_INDEX
     5 语料数字化：将分词列表替换成序号列表，并保存结果至csv:NUMERIC_DATA
     6 获取embeddings_index（加载预训练好的word2vec词典）
     7 通过获取embeddings_index以及word_index，生成embedding_matrix
+    :param skip_download: 是否跳过数据下载
     :return:
     """
     # 如果需要下载，通过接口下载数据，并保存结果至csv
@@ -79,28 +80,24 @@ def pre_process(skip_download=False):
         get_data_1_from_api()
         print('download and save to ' + DATA_0 + ',' + DATA_1)
 
-    # 处理正例数据，分词
-    d1 = pd.read_csv(DATA_1, header=None, names=['doc'])
-    d1['label'] = 1
-    d1['tokens'] = d1['doc'].map(lambda x: ' '.join(jieba.cut(x, cut_all=False)))
-    d1 = d1[['tokens', 'label']]
-    print('data 1 segmentation')
+    # 处理正例数据，添加标签
+    df1 = pd.read_csv(DATA_1, header=None, names=['doc'])
+    df1['label'] = 1
 
-    # 处理反例数据，分词
-    d0 = pd.read_csv(DATA_0, header=None, names=['doc'])
-    d0['label'] = 0
-    d0['tokens'] = d0['doc'].map(lambda x: ' '.join(jieba.cut(x, cut_all=False)))
-    d0 = d0[['tokens', 'label']]
-    print('data 0 segmentation')
+    # 处理反例数据，添加标签
+    df0 = pd.read_csv(DATA_0, header=None, names=['doc'])
+    df0['label'] = 0
 
-    # 合并正例反例，打乱顺序，并保存结果至csv:SEG_DATA
-    seg_data = d1.append(d0, ignore_index=True)
-    # seg_data = seg_data.sample(frac=1)
+    # 合并正例反例，分词，打乱顺序，并保存结果至csv:SEG_DATA
+    df10 = df1.append(df0, ignore_index=True)
+    df10['tokens'] = df10['doc'].map(segment)
+    seg_data = df10[['tokens', 'label']]
+    seg_data = seg_data.sample(frac=1)
     seg_data.to_csv(SEG_DATA, encoding='utf-8')
     print('segmentation and save to ' + SEG_DATA)
 
     # 获取word_index，并保存结果至csv:WORD_INDEX
-    word_index = get_word_index(d0, d1)
+    word_index = get_word_index(seg_data)
     word_index_df = DataFrame(list(word_index.items()), columns=['word', 'index'])
     word_index_df.to_csv(WORD_INDEX, encoding='utf-8')
     print('getting word_index and save to ' + WORD_INDEX)
@@ -155,29 +152,46 @@ def generate_embedding_matrix(embeddings_index):
     return embedding_matrix
 
 
+# def word2index(tokens):
+#     """
+#     将输入的tokens转换成word_index中的序号
+#     :param tokens:
+#     :return:
+#     """
+#     word_list = tokens.split(SEG_SPLITTER)
+#     indexes = []
+#     for word in word_list:
+#         if word is not None:
+#             if word in word_index.keys():
+#                 indexes.append(str(word_index[word]))
+#     return SEG_SPLITTER.join(indexes).strip()
+
 def word2index(tokens):
     """
     将输入的tokens转换成word_index中的序号
     :param tokens:
     :return:
     """
-    l1 = tokens.split(SEG_SPLITTER)
-    l2 = [x for x in l1 if x is not None]  # 去分词列表的非空部分
+    word_list = tokens.split(SEG_SPLITTER)
     indexes = []
-    for one in l2:
-        if one in word_index.keys():
-            indexes.append(str(word_index[one]))
+    for word in word_list:
+        if word is not None:
+            if word in word_index.keys():
+                index = word_index[word]
+                if index > MAX_NUM_WORDS:
+                    indexes.append('0')
+                else:
+                    indexes.append(str(index))
     return SEG_SPLITTER.join(indexes).strip()
 
 
-def segment(df):
+def segment(input_string):
     """
-    将正文doc分词，保存于tokens。返回tokens,label
-    :param df:
+    分词
+    :param input_string:
     :return:
     """
-    df['tokens'] = df['doc'].map(lambda x: SEG_SPLITTER.join(jieba.cut(x, cut_all=False)))
-    return df[['tokens', 'label']]
+    return SEG_SPLITTER.join(jieba.cut(input_string, cut_all=False))
 
 
 def get_data_0_from_api():
@@ -192,10 +206,10 @@ def get_data_0_from_api():
             j1 = json.loads(resp)
             results = j1['value']
             for result in results:
-                x = result.get('wcaption') \
+                line = result.get('wcaption') \
                     .replace(',', '，') \
                     .replace('免费订阅精彩鬼故事，微信号：guidayecom', '')
-                f.write(x + '\n')
+                f.write(line + '\n')
 
 
 def get_data_1_from_api():
@@ -210,30 +224,21 @@ def get_data_1_from_api():
             j1 = json.loads(resp)
             results = j1['value']
             for result in results:
-                x = result.get('wcaption') \
+                line = result.get('wcaption') \
                     .replace(',', '，') \
                     .replace('|', '')
-                f.write(x + '\n')
+                f.write(line + '\n')
 
 
-def get_word_index(d0, d1):
+def get_word_index(df):
     """
     统计语料分词词典，按照词频由大到小排序
     :param d0:
     :param d1:
     :return:
     """
-    word_index = {}
     word_dict = {}
-    for tokens in d0['tokens']:
-        words = tokens.split(SEG_SPLITTER)
-        for word in words:
-            if word in word_dict.keys():
-                count = word_dict[word]
-                word_dict[word] = count + 1
-            else:
-                word_dict[word] = 1
-    for tokens in d1['tokens']:
+    for tokens in df['tokens']:
         words = tokens.split(SEG_SPLITTER)
         for word in words:
             if word in word_dict.keys():
