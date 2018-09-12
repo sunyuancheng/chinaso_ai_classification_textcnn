@@ -78,7 +78,7 @@ def pre_process(skip_download=False):
     if not skip_download:
         get_data_0_from_api()
         get_data_1_from_api()
-        print('download and save to ' + DATA_0 + ',' + DATA_1)
+    print('download and save to ' + DATA_0 + ',' + DATA_1)
 
     # 处理正例数据，添加标签
     df1 = pd.read_csv(DATA_1, header=None, names=['doc'])
