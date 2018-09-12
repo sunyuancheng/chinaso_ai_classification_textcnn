@@ -21,15 +21,10 @@
 from keras.layers import Dense, Flatten, Conv1D, MaxPooling1D, Dropout, Input, concatenate, Embedding
 from keras.models import Model
 from keras.initializers import Constant
-from keras.preprocessing import sequence
-from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
-from keras.utils import to_categorical
 import numpy as np
 import os
-import sys
 import pandas as pd
-import jieba
 
 # Word2Vec source, data source
 BASE_DIR = '/data0/search/textcnn/data/'
@@ -181,7 +176,7 @@ if __name__ == "__main__":
     model.fit(x_train, y_train,
               batch_size=BATCH_SIZE,
               epochs=NUM_EPOCHS,
-              validation_data=(x_val, y_val),
+              validation_split=VALIDATION_SPLIT,
               shuffle=True)
     scores = model.eveluate(x_test, y_test)
     print('test_loss: %f, accuracy: %f' % (scores[0], scores[1]))
