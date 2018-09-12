@@ -110,10 +110,12 @@ def pre_process(skip_download=False):
 
     # 获取embeddings_index（加载预训练好的word2vec词典）
     embeddings_index = get_embeddings_index()
+    print('get embeddings_index (or word2vec dict)')
 
     # 通过获取embeddings_index以及word_index，生成embedding_matrix
     embedding_matrix = generate_embedding_matrix(embeddings_index)
     np.save(EMBEDDING_MATRIX, embedding_matrix)
+    print('generate_embedding_matrix and save to' + EMBEDDING_MATRIX)
 
 
 def get_embeddings_index():
