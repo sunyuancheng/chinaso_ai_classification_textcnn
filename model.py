@@ -42,7 +42,7 @@ TEST_SPLIT = 0.2
 
 # Training parameters
 BATCH_SIZE = 64
-NUM_EPOCHS = 10
+NUM_EPOCHS = 1
 
 # Prepossessing parameters
 MAX_NUM_WORDS = 150000  # 词典最大词数，若语料中含词数超过该数，则取前MAX_NUM_WORDS个
@@ -178,5 +178,5 @@ if __name__ == "__main__":
               epochs=NUM_EPOCHS,
               validation_split=VALIDATION_SPLIT,
               shuffle=True)
-    scores = model.eveluate(x_test, y_test)
+    scores = model.evaluate(x_test, y_test)
     print('test_loss: %f, accuracy: %f' % (scores[0], scores[1]))
