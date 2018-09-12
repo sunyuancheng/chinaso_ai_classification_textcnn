@@ -90,6 +90,7 @@ def pre_process(skip_download=False):
 
     # 合并正例反例，分词，打乱顺序，并保存结果至csv:SEG_DATA
     df10 = df1.append(df0, ignore_index=True)
+
     df10['tokens'] = df10['doc'].map(segment)
     seg_data = df10[['tokens', 'label']]
     seg_data = seg_data.sample(frac=1)
