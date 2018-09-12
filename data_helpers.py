@@ -52,7 +52,7 @@ EMBEDDING_MATRIX = os.path.join(BASE_DIR, 'embedding_matrix.npy')  # embedding_m
 
 # 超参
 EMBEDDING_DIM = 300  # 词向量维数
-MAX_NUM_WORDS = 157000  # 词典最大词数，若语料中含词数超过该数，则取前MAX_NUM_WORDS个
+MAX_NUM_WORDS = 150000  # 词典最大词数，若语料中含词数超过该数，则取前MAX_NUM_WORDS个
 
 # 分隔符
 SEG_SPLITTER = ' '
