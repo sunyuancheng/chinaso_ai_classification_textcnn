@@ -30,6 +30,7 @@ import pandas as pd
 BASE_DIR = '/data0/search/textcnn/data/'
 EMBEDDING_MATRIX = os.path.join(BASE_DIR, 'embedding_matrix.npy')  # embedding_matrix
 NUMERIC_DATA = os.path.join(BASE_DIR, 'numeric_data.csv')  # 序号化后数据
+MODEL = os.path.join(BASE_DIR, 'model_textcnn.h5')
 
 # Model Hyperparameters
 EMBEDDING_DIM = 300  # 词向量维数
@@ -102,7 +103,7 @@ def pre_processing():
     # 获取数字化的数据集
     d1 = pd.read_csv(NUMERIC_DATA)
     d1['index_array'] = d1['indexes'].map(lambda x: x.split(' '))
-    sequences = d1['index_array']
+    sequences = d1['index_array'][:1000]
     data = pad_sequences(sequences, maxlen=MAX_SEQUENCE_LENGTH, padding='post')
     labels = d1['label'].values.reshape(-1, 1)
     print('Shape of data tensor:', data.shape)
@@ -120,6 +121,10 @@ def pre_processing():
     y_train = labels[:-train_test_samples]
     x_test = data[-train_test_samples:]
     y_test = labels[-train_test_samples:]
+    print('Shape of data x_train:', x_train.shape)
+    print('Shape of label y_train:', y_train.shape)
+    print('Shape of data x_test:', x_test.shape)
+    print('Shape of label y_test:', y_test.shape)
     return x_train, y_train, x_test, y_test
 
 
@@ -180,3 +185,5 @@ if __name__ == "__main__":
               shuffle=True)
     scores = model.evaluate(x_test, y_test)
     print('test_loss: %f, accuracy: %f' % (scores[0], scores[1]))
+
+    model.save(MODEL)
