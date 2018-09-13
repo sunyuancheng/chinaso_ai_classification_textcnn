@@ -23,6 +23,7 @@ from keras.models import Model
 from keras.initializers import Constant
 from keras.preprocessing.sequence import pad_sequences
 from keras.utils import to_categorical
+from keras.models import load_model
 import numpy as np
 import os
 import pandas as pd
@@ -31,7 +32,7 @@ import pandas as pd
 BASE_DIR = '/data0/search/textcnn/data/'
 EMBEDDING_MATRIX = os.path.join(BASE_DIR, 'embedding_matrix.npy')  # embedding_matrix
 NUMERIC_DATA = os.path.join(BASE_DIR, 'numeric_data.csv')  # 序号化后数据
-MODEL = os.path.join(BASE_DIR, 'model_textcnn.h5')
+MODEL = os.path.join(BASE_DIR, 'model_textcnn_015.h5')
 
 # Model Hyperparameters
 EMBEDDING_DIM = 300  # 词向量维数
@@ -49,6 +50,7 @@ NUM_EPOCHS = 1
 # Prepossessing parameters
 MAX_NUM_WORDS = 150000  # 词典最大词数，若语料中含词数超过该数，则取前MAX_NUM_WORDS个
 MAX_SEQUENCE_LENGTH = 2000  # 每篇文章最长词数
+NUM_LABELS = 6 # 分类数目
 
 
 def text_cnn():
@@ -129,7 +131,7 @@ def text_cnn_multi_class():
     x = Dropout(DROPOUT_RATE)(merge)
     x = Dense(HIDDEN_DIMS, activation='relu')(x)
 
-    preds = Dense(units=1, activation='softmax')(x)
+    preds = Dense(units=NUM_LABELS, activation='softmax')(x)
 
     model = Model(sequence_input, preds)
     model.compile(loss="categorical_crossentropy",
@@ -267,3 +269,4 @@ if __name__ == "__main__":
     print('test_loss: %f, accuracy: %f' % (scores[0], scores[1]))
 
     # model.save(MODEL)
+    # model = load_model(MODEL)
