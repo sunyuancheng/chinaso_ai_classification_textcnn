@@ -94,7 +94,85 @@ def text_cnn():
     return model
 
 
+def text_cnn_multi_class():
+    """
+    构建多分类text_cnn模型
+    :return:
+    """
+    # Inputs
+    sequence_input = Input(shape=(MAX_SEQUENCE_LENGTH,), dtype='int32')
+
+    # Embeddings layers
+    # load pre-trained word embeddings into an Embedding layer
+    # note that we set trainable = False so as to keep the embeddings fixed
+    embedding_matrix = np.load(EMBEDDING_MATRIX)
+    num_words = embedding_matrix.shape[0]+1
+    embedding_layer = Embedding(num_words,
+                                EMBEDDING_DIM,
+                                embeddings_initializer=Constant(embedding_matrix),
+                                input_length=MAX_SEQUENCE_LENGTH,
+                                trainable=False)
+    embedded_sequences = embedding_layer(sequence_input)
+
+    # conv layers
+    convs = []
+    for filter_size in FILTER_SIZES:
+        l_conv = Conv1D(filters=NUM_FILTERS,
+                        kernel_size=filter_size,
+                        activation='relu')(embedded_sequences)
+        l_pool = MaxPooling1D(MAX_SEQUENCE_LENGTH - filter_size + 1)(l_conv)
+        l_pool = Flatten()(l_pool)
+        convs.append(l_pool)
+    merge = concatenate(convs, axis=1)
+
+    x = Dropout(DROPOUT_RATE)(merge)
+    x = Dense(HIDDEN_DIMS, activation='relu')(x)
+
+    preds = Dense(units=1, activation='sigmoid')(x)
+
+    model = Model(sequence_input, preds)
+    model.compile(loss="binary_crossentropy",
+                  optimizer="adam",
+                  metrics=['accuracy'])
+
+    return model
+
+
 def pre_processing():
+    """
+    预处理。获取训练集，测试集。
+    :return:
+    """
+
+    # 获取数字化的数据集
+    d1 = pd.read_csv(NUMERIC_DATA)
+    d1['index_array'] = d1['indexes'].map(lambda x: x.split(' '))
+    sequences = d1['index_array']
+    data = pad_sequences(sequences, maxlen=MAX_SEQUENCE_LENGTH, padding='post')
+    labels = d1['label'].values.reshape(-1, 1)
+    print('Shape of data tensor:', data.shape)
+    print('Shape of label tensor:', labels.shape)
+
+    # 切分训练集和测试集
+    data_size = data.shape[0]
+    indices = np.arange(data_size)
+    np.random.shuffle(indices)
+    data = data[indices]
+    labels = labels[indices]
+    train_test_samples = int(TEST_SPLIT * data_size)
+
+    x_train = data[:-train_test_samples]
+    y_train = labels[:-train_test_samples]
+    x_test = data[-train_test_samples:]
+    y_test = labels[-train_test_samples:]
+    print('Shape of data x_train:', x_train.shape)
+    print('Shape of label y_train:', y_train.shape)
+    print('Shape of data x_test:', x_test.shape)
+    print('Shape of label y_test:', y_test.shape)
+    return x_train, y_train, x_test, y_test
+
+
+def pre_processing_multi_class():
     """
     预处理。获取训练集，测试集。
     :return:
