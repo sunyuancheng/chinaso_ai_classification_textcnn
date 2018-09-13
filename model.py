@@ -22,6 +22,7 @@ from keras.layers import Dense, Flatten, Conv1D, MaxPooling1D, Dropout, Input, c
 from keras.models import Model
 from keras.initializers import Constant
 from keras.preprocessing.sequence import pad_sequences
+from keras.utils import to_categorical
 import numpy as np
 import os
 import pandas as pd
@@ -128,12 +129,12 @@ def text_cnn_multi_class():
     x = Dropout(DROPOUT_RATE)(merge)
     x = Dense(HIDDEN_DIMS, activation='relu')(x)
 
-    preds = Dense(units=1, activation='sigmoid')(x)
+    preds = Dense(units=1, activation='softmax')(x)
 
     model = Model(sequence_input, preds)
-    model.compile(loss="binary_crossentropy",
-                  optimizer="adam",
-                  metrics=['accuracy'])
+    model.compile(loss="categorical_crossentropy",
+                  optimizer="rmsprop",
+                  metrics=['acc'])
 
     return model
 
@@ -181,9 +182,10 @@ def pre_processing_multi_class():
     # 获取数字化的数据集
     d1 = pd.read_csv(NUMERIC_DATA)
     d1['index_array'] = d1['indexes'].map(lambda x: x.split(' '))
-    sequences = d1['index_array'][:1000]
+    sequences = d1['index_array']
     data = pad_sequences(sequences, maxlen=MAX_SEQUENCE_LENGTH, padding='post')
     labels = d1['label'].values.reshape(-1, 1)
+    labels = to_categorical(labels)
     print('Shape of data tensor:', data.shape)
     print('Shape of label tensor:', labels.shape)
 
@@ -253,8 +255,8 @@ def pre_processing_multi_class():
 
 
 if __name__ == "__main__":
-    x_train, y_train, x_test, y_test = pre_processing()
-    model = text_cnn()
+    x_train, y_train, x_test, y_test = pre_processing_multi_class()
+    model = text_cnn_multi_class()
     model.summary()
     model.fit(x_train, y_train,
               batch_size=BATCH_SIZE,
