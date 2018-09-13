@@ -20,7 +20,7 @@
 # ========================================================================
 import urllib
 import os
-
+import json
 
 # 新闻数据接口
 URL_0 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01276/search' \
