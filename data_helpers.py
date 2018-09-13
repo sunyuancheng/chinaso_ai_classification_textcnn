@@ -95,19 +95,18 @@ def pre_process(skip_download=False):
         get_data_5_from_api()
     print('download and save')
 
-    # 处理正例数据，添加标签
-    df1 = pd.read_csv(DATA_1, header=None, names=['doc'])
-    df1['label'] = 1
-
-    # 处理反例数据，添加标签
+    # 添加标签
     df0 = pd.read_csv(DATA_0, header=None, names=['doc'])
     df0['label'] = 0
+    df1 = pd.read_csv(DATA_1, header=None, names=['doc'])
+    df1['label'] = 1
+    df5 = pd.read_csv(DATA_5, header=None, names=['doc'])
+    df5['label'] = 5
 
     # 合并正例反例，分词，打乱顺序，并保存结果至csv:SEG_DATA
-    df10 = df1.append(df0, ignore_index=True)
-
-    df10['tokens'] = df10['doc'].map(segment)
-    seg_data = df10[['tokens', 'label']]
+    all_data = df0.append(df1, ignore_index=True).append(df5, ignore_index=True)
+    all_data['tokens'] = all_data['doc'].map(segment)
+    seg_data = all_data[['tokens', 'label']]
     seg_data = seg_data.sample(frac=1)
     seg_data.to_csv(SEG_DATA, encoding='utf-8')
     print('segmentation and save to ' + SEG_DATA)
@@ -169,20 +168,6 @@ def generate_embedding_matrix(embeddings_index):
             embedding_matrix[i] = embedding_vector
     return embedding_matrix
 
-
-# def word2index(tokens):
-#     """
-#     将输入的tokens转换成word_index中的序号
-#     :param tokens:
-#     :return:
-#     """
-#     word_list = tokens.split(SEG_SPLITTER)
-#     indexes = []
-#     for word in word_list:
-#         if word is not None:
-#             if word in word_index.keys():
-#                 indexes.append(str(word_index[word]))
-#     return SEG_SPLITTER.join(indexes).strip()
 
 def word2index(tokens):
     """
@@ -290,37 +275,6 @@ def get_word_index(df):
         w = word[0]
         word_index[w] = i + 1
     return word_index
-
-
-def test_jieba_extract_tags():
-    """
-    测试jieba生成tfidf关键词
-    :return:
-    """
-    import jieba
-    import jieba.analyse
-
-    # text = "故宫的著名景点包括乾清宫、太和殿和午门等。其中乾清宫非常精美，午门是紫禁城的正门，午门居中向阳。"
-    text = ''
-    # jieba.load_userdict("jieba_dict.txt")  # 用户自定义词典 （用户可以自己在这个文本文件中，写好自定制词汇）
-    f = open(DATA_0, 'r', encoding='utf8')  # 要进行分词处理的文本文件 (统统按照utf8文件去处理，省得麻烦)
-    lines = f.readlines()
-    for line in lines:
-        text += line
-
-    # seg_list = jieba.cut(text, cut_all=False)  #精确模式（默认是精确模式）
-    # seg_list = jieba.cut(text, cut_all=False) # 精确模式（默认是精确模式）
-    # print("[精确模式]: ", "/ ".join(seg_list))
-
-    # seg_list2 = jieba.cut(text, cut_all=True)    #全模式
-    # print("[全模式]: ", "/ ".join(seg_list2))
-
-    # seg_list3 = jieba.cut_for_search(text)    #搜索引擎模式
-    # print("[搜索引擎模式]: ","/ ".join(seg_list3))
-
-    tags = jieba.analyse.extract_tags(text, topK=100, withWeight=True)
-    # print("关键词:    ", " / ".join(tags))
-    return tags
 
 
 if __name__ == '__main__':
