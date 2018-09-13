@@ -324,4 +324,4 @@ def test_jieba_extract_tags():
 
 
 if __name__ == '__main__':
-    pre_process(skip_download=True)
+    pre_process(skip_download=False)
