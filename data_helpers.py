@@ -29,21 +29,27 @@ import os
 # LABEL_INDEX = {'恐怖':1,'暴力':2,'脏话':3,'自杀':4,'色情':5}
 LABEL_INDEX = {'恐怖': 1, '正常': 0}
 
-# 正例接口
-URL_1 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01276/search' \
+# 新闻数据接口
+URL_0 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01276/search' \
         '?fields=id,wcaption&filters=EQS_ifCompare,1|EQS_resourceState,4|EQS_newsLabelSecond,' \
         '%E6%97%B6%E6%94%BF%E6%BB%9A%E5%8A%A8&orders=wpubTime_desc' \
         '&pagestart=1&fetchsize=10000'
 
-# 反例接口
-URL_0 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search' \
+# 反例数据接口：恐怖
+URL_1 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search' \
         '?fields=id,wcaption&filters=EQS_resourceState,4' \
         '|EQS_newsLabel,%E6%81%90%E6%80%96&pagestart=1&fetchsize=10000'
 
+# 反例数据接口：色情
+URL_5 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search' \
+        '?fields=id,wcaption&filters=EQS_resourceState,4' \
+        '|EQS_newsLabel,%E8%89%B2%E6%83%85&pagestart=1&fetchsize=10000'
+
 # 数据保存地址
 BASE_DIR = '/data0/search/textcnn/data/'
-DATA_1 = os.path.join(BASE_DIR, 'data_1.txt')  # 正例语料
-DATA_0 = os.path.join(BASE_DIR, 'data_0.txt')  # 反例语料
+DATA_0 = os.path.join(BASE_DIR, 'data_0.txt')  # 新闻语料
+DATA_1 = os.path.join(BASE_DIR, 'data_1.txt')  # 反例恐怖语料
+DATA_5 = os.path.join(BASE_DIR, 'data_5.txt')  # 反例色情语料
 SEG_DATA = os.path.join(BASE_DIR, 'seg_data.csv')  # 分词后数据
 WORD_INDEX = os.path.join(BASE_DIR, 'word_index.csv')  # word_index
 NUMERIC_DATA = os.path.join(BASE_DIR, 'numeric_data.csv')  # 序号化后数据
@@ -59,6 +65,14 @@ SEG_SPLITTER = ' '
 # CSV_SPLITTER = ','
 
 word_index = {}
+
+# 打开停用词表并做处理
+STOP_WORDS_LIST = os.path.join(BASE_DIR, 'stop_list.txt')  # 停用词表
+with open(STOP_WORDS_LIST, 'r') as f:
+    stop_words = f.readlines()
+del stop_words[0]  # 删除txt文件第一行的特殊字符
+for word in stop_words:  # 删除每行最后的回车
+    stop_words[stop_words.index(word)] = word.replace('\n', '')
 
 
 def pre_process(skip_download=False):
@@ -78,7 +92,8 @@ def pre_process(skip_download=False):
     if not skip_download:
         get_data_0_from_api()
         get_data_1_from_api()
-    print('download and save to ' + DATA_0 + ',' + DATA_1)
+        get_data_5_from_api()
+    print('download and save')
 
     # 处理正例数据，添加标签
     df1 = pd.read_csv(DATA_1, header=None, names=['doc'])
@@ -194,16 +209,37 @@ def segment(input_string):
     :param input_string:
     :return:
     """
-    return SEG_SPLITTER.join(jieba.cut(input_string, cut_all=False))
+    seg_origin = SEG_SPLITTER.join(jieba.cut(input_string, cut_all=False))
+    seg_origin_list = seg_origin.split(SEG_SPLITTER)
+    seg_stop_list = [word for word in seg_origin_list if word not in stop_words]
+    return SEG_SPLITTER.join(seg_stop_list)
 
 
 def get_data_0_from_api():
     """
-    通过接口获得反例数据，并保存至文件
+    通过接口获取新闻数据，并保存至文件
     含有简单文本过滤，并替换CSV文件分隔符：英文逗号
     :return:
     """
     with open(DATA_0, 'w') as f:
+        with urllib.request.urlopen(URL_1) as response:
+            resp = response.read()
+            j1 = json.loads(resp)
+            results = j1['value']
+            for result in results:
+                line = result.get('wcaption') \
+                    .replace(',', '，') \
+                    .replace('|', '')
+                f.write(line + '\n')
+
+
+def get_data_1_from_api():
+    """
+    通过接口获得反例恐怖数据，并保存至文件
+    含有简单文本过滤，并替换CSV文件分隔符：英文逗号
+    :return:
+    """
+    with open(DATA_1, 'w') as f:
         with urllib.request.urlopen(URL_0) as response:
             resp = response.read()
             j1 = json.loads(resp)
@@ -215,21 +251,20 @@ def get_data_0_from_api():
                 f.write(line + '\n')
 
 
-def get_data_1_from_api():
+def get_data_5_from_api():
     """
-    通过接口获取正例数据，并保存至文件
+    通过接口获取正例色情数据，并保存至文件
     含有简单文本过滤，并替换CSV文件分隔符：英文逗号
     :return:
     """
-    with open(DATA_1, 'w') as f:
-        with urllib.request.urlopen(URL_1) as response:
+    with open(DATA_5, 'w') as f:
+        with urllib.request.urlopen(URL_5) as response:
             resp = response.read()
             j1 = json.loads(resp)
             results = j1['value']
             for result in results:
                 line = result.get('wcaption') \
-                    .replace(',', '，') \
-                    .replace('|', '')
+                    .replace(',', '，')
                 f.write(line + '\n')
 
 
