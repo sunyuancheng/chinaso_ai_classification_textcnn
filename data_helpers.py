@@ -53,6 +53,7 @@ DATA_0 = os.path.join(BASE_DIR, 'dataset/news/data_0.txt')  # 新闻语料
 DATA_1 = os.path.join(BASE_DIR, 'dataset/horror/data_1.txt')  # 反例恐怖语料
 DATA_5 = os.path.join(BASE_DIR, 'dataset/sex/data_5.txt')  # 反例色情语料
 SEG_DATA = os.path.join(BASE_DIR, 'seg_data.csv')  # 分词后数据
+SEG_DATA_SHUFFLED = os.path.join(BASE_DIR, 'seg_data_shuffled.csv')  # 分词后数据
 WORD_INDEX = os.path.join(BASE_DIR, 'word_index.npy')  # word_index
 NUMERIC_DATA = os.path.join(BASE_DIR, 'numeric_data.csv')  # 序号化后数据
 WORD2VEC = os.path.join(BASE_DIR, 'sgns.merge.bigram')  # word2vec词典地址
@@ -111,18 +112,21 @@ def pre_process(skip_download=False):
     print('all data size=' + str(len(all_data)))
 
     # all_data = get_labeled_data()
-
-    print('get data and set labels')
+    print('get data, size = '+str(len(all_data)))
+    print('set labels')
 
     # 合并正例反例，分词，打乱顺序，并保存结果至csv:SEG_DATA
     all_data['tokens'] = all_data['doc'].map(segment)
-    seg_data = all_data[['tokens', 'label']]
-    seg_data = seg_data.sample(frac=1)
-    seg_data.to_csv(SEG_DATA, encoding='utf-8')
+    all_data.to_csv(SEG_DATA, encoding='utf-8')
     print('segmentation and save to ' + SEG_DATA)
 
+    seg_data = all_data[['tokens', 'label']]
+    seg_data_shuffled = seg_data.sample(frac=1)
+    seg_data_shuffled.to_csv(SEG_DATA_SHUFFLED, encoding='utf-8')
+    print('shuffle and save to ' + SEG_DATA_SHUFFLED)
+
     # 获取word_index，并保存结果至csv:WORD_INDEX
-    word_index = get_word_index(seg_data)
+    word_index = get_word_index(seg_data_shuffled)
 
     # word_index_df = DataFrame(list(word_index.items()), columns=['word', 'index'])
     # word_index_df.to_csv(WORD_INDEX, encoding='utf-8')

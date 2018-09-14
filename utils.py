@@ -22,7 +22,6 @@ import os
 import jieba
 import numpy as np
 
-
 # 打开停用词表并做处理
 BASE_DIR = '/data0/search/textcnn/data/'
 STOP_WORDS_LIST = os.path.join(BASE_DIR, 'stop_list.txt')  # 停用词表
@@ -39,13 +38,16 @@ MAX_NUM_WORDS = 150000
 
 
 def get_index_sequence_from_text(text):
+    """
+    获取词序列
+    :param text:文本
+    :return: 词序列
+    """
     # 分词
     tokens = segment(text)
     # 转换成词序号序列
     indexes = word2index(tokens)
     return indexes
-
-
 
 
 def segment(input_string):
