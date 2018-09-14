@@ -26,9 +26,7 @@ import json
 import jieba
 import os
 
-# LABEL_INDEX = {'新闻':0,'恐怖':1,'暴力':2,'脏话':3,'自杀':4,'色情':5}
 LABEL_INDEX = {'news': 0, 'horror': 1, 'violence': 2, 'dirty_words': 3, 'suicide': 4, 'sex': 5}
-# LABEL_INDEX = {'恐怖': 1, '正常': 0}
 
 # 新闻数据接口
 URL_0 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01276/search' \
@@ -52,6 +50,7 @@ DATASET = os.path.join(BASE_DIR, 'dataset/')  # 数据集文件夹
 DATA_0 = os.path.join(BASE_DIR, 'dataset/news/data_0.txt')  # 新闻语料
 DATA_1 = os.path.join(BASE_DIR, 'dataset/horror/data_1.txt')  # 反例恐怖语料
 DATA_5 = os.path.join(BASE_DIR, 'dataset/sex/data_5.txt')  # 反例色情语料
+DATA_TEST = os.path.join(BASE_DIR, 'data_55.txt')
 SEG_DATA = os.path.join(BASE_DIR, 'seg_data.csv')  # 分词后数据
 SEG_DATA_SHUFFLED = os.path.join(BASE_DIR, 'seg_data_shuffled.csv')  # 分词后数据
 WORD_INDEX = os.path.join(BASE_DIR, 'word_index.npy')  # word_index
@@ -99,19 +98,20 @@ def pre_process(skip_download=False):
     print('download and save')
 
     # 添加标签
-    df0 = pd.read_csv(DATA_0, header=None, names=['doc'])
-    df0['label'] = 0
-    print('get data 0' + str(len(df0)))
-    df1 = pd.read_csv(DATA_1, header=None, names=['doc'])
-    df1['label'] = 1
-    print('get data 1' + str(len(df1)))
-    df5 = pd.read_csv(DATA_5, header=None, names=['doc'])
-    df5['label'] = 5
-    print('get data 5' + str(len(df5)))
-    all_data = df0.append(df1, ignore_index=True).append(df5, ignore_index=True)
-    print('all data size=' + str(len(all_data)))
+    # df0 = pd.read_csv(DATA_0, header=None, names=['doc'])
+    # df0['label'] = 0
+    # print('get data 0' + str(len(df0)))
+    # df1 = pd.read_csv(DATA_1, header=None, names=['doc'])
+    # df1['label'] = 1
+    # print('get data 1' + str(len(df1)))
+    # df5 = pd.read_csv(DATA_5, header=None, names=['doc'])
+    # df5['label'] = 5
+    # print('get data 5' + str(len(df5)))
+    # all_data = df0.append(df1, ignore_index=True).append(df5, ignore_index=True)
+    # print('all data size=' + str(len(all_data)))
 
-    # all_data = get_labeled_data()
+    all_data = get_labeled_data()
+    all_data = all_data.sample(frac=1)
     print('get data, size = '+str(len(all_data)))
     print('set labels')
 
@@ -151,6 +151,8 @@ def pre_process(skip_download=False):
     print('generate_embedding_matrix and save to' + EMBEDDING_MATRIX)
 
 
+
+
 def get_labeled_data():
     """
     从文档中读取dataframe，并增加标签
@@ -165,7 +167,7 @@ def get_labeled_data():
             for fname in sorted(os.listdir(path)):
                 single_data_path = os.path.join(path, fname)
                 print(single_data_path)
-                df = pd.read_csv(single_data_path, header=None, names=['doc'])[:10]
+                df = pd.read_csv(single_data_path, header=None, names=['doc'])
                 df['label'] = label
                 all_data = all_data.append(df, ignore_index=True)
     return all_data
@@ -223,6 +225,8 @@ def word2index(tokens):
                     indexes.append('0')
                 else:
                     indexes.append(str(index))
+            else:
+                indexes.append('0')
     return SEG_SPLITTER.join(indexes).strip()
 
 
