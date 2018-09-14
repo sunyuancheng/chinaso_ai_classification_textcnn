@@ -53,7 +53,7 @@ DATA_0 = os.path.join(BASE_DIR, 'dataset/news/data_0.txt')  # 新闻语料
 DATA_1 = os.path.join(BASE_DIR, 'dataset/horror/data_1.txt')  # 反例恐怖语料
 DATA_5 = os.path.join(BASE_DIR, 'dataset/sex/data_5.txt')  # 反例色情语料
 SEG_DATA = os.path.join(BASE_DIR, 'seg_data.csv')  # 分词后数据
-WORD_INDEX = os.path.join(BASE_DIR, 'word_index.csv')  # word_index
+WORD_INDEX = os.path.join(BASE_DIR, 'word_index.npy')  # word_index
 NUMERIC_DATA = os.path.join(BASE_DIR, 'numeric_data.csv')  # 序号化后数据
 WORD2VEC = os.path.join(BASE_DIR, 'sgns.merge.bigram')  # word2vec词典地址
 EMBEDDING_MATRIX = os.path.join(BASE_DIR, 'embedding_matrix.npy')  # embedding_matrix
@@ -97,40 +97,18 @@ def pre_process(skip_download=False):
         get_data_5_from_api()
     print('download and save')
 
-
-    all_data = get_labeled_data()
-
-    texts = []  # list of text samples
-    labels_index = {}  # dictionary mapping label name to numeric id
-    labels = []  # list of label ids
-    for name in sorted(os.listdir(DATASET)):
-        path = os.path.join(DATASET, name)
-        if os.path.isdir(path):
-            for fname in sorted(os.listdir(path)):
-                print(os.path.join(path, fname))
-            # label_id = len(labels_index)
-            # labels_index[name] = label_id
-            # for fname in sorted(os.listdir(path)):
-            #     if fname.isdigit():
-            #         fpath = os.path.join(path, fname)
-            #         args = {} if sys.version_info < (3,) else {'encoding': 'latin-1'}
-            #         with open(fpath, **args) as f:
-            #             t = f.read()
-            #             i = t.find('\n\n')  # skip header
-            #             if 0 < i:
-            #                 t = t[i:]
-            #             texts.append(t)
-
     # 添加标签
-    df0 = pd.read_csv(DATA_0, header=None, names=['doc'])
-    df0['label'] = 0
-    df1 = pd.read_csv(DATA_1, header=None, names=['doc'])
-    df1['label'] = 1
-    df5 = pd.read_csv(DATA_5, header=None, names=['doc'])
-    df5['label'] = 5
+    # df0 = pd.read_csv(DATA_0, header=None, names=['doc'])
+    # df0['label'] = 0
+    # df1 = pd.read_csv(DATA_1, header=None, names=['doc'])
+    # df1['label'] = 1
+    # df5 = pd.read_csv(DATA_5, header=None, names=['doc'])
+    # df5['label'] = 5
+    all_data = get_labeled_data()
+    print('get data and set labels')
 
     # 合并正例反例，分词，打乱顺序，并保存结果至csv:SEG_DATA
-    all_data = df0.append(df1, ignore_index=True).append(df5, ignore_index=True)
+    # all_data = df0.append(df1, ignore_index=True).append(df5, ignore_index=True)
     all_data['tokens'] = all_data['doc'].map(segment)
     seg_data = all_data[['tokens', 'label']]
     seg_data = seg_data.sample(frac=1)
@@ -139,8 +117,12 @@ def pre_process(skip_download=False):
 
     # 获取word_index，并保存结果至csv:WORD_INDEX
     word_index = get_word_index(seg_data)
-    word_index_df = DataFrame(list(word_index.items()), columns=['word', 'index'])
-    word_index_df.to_csv(WORD_INDEX, encoding='utf-8')
+
+    # word_index_df = DataFrame(list(word_index.items()), columns=['word', 'index'])
+    # word_index_df.to_csv(WORD_INDEX, encoding='utf-8')
+    np.save(WORD_INDEX, word_index)
+    # 读取
+    # word_index = np.load(WORD_INDEX)[()]
     print('getting word_index and save to ' + WORD_INDEX)
 
     # 语料数字化：将分词列表替换成序号列表，并保存结果至csv:NUMERIC_DATA
