@@ -18,23 +18,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ========================================================================
-from keras.layers import Dense, Flatten, Conv1D, MaxPooling1D, Dropout, Input, concatenate,Embedding
+from keras.layers import Dense, Flatten, Conv1D, MaxPooling1D, Dropout, Input, concatenate, Embedding
 from keras.models import Model
 from keras.initializers import Constant
-from keras.preprocessing import sequence
-from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from keras.utils import to_categorical
+from keras.models import load_model
 import numpy as np
 import os
-import sys
 import pandas as pd
-import jieba
 
 # Word2Vec source, data source
-BASE_DIR = "/application/search/ming"
-WORD2VEC_DIR = os.path.join(BASE_DIR, 'sgns.merge.bigram')  # 词典地址
-TEXT_DATA_DIR = os.path.join(BASE_DIR, '20_newsgroup')  # 数据地址
+BASE_DIR = '/data0/search/textcnn/data/'
+EMBEDDING_MATRIX = os.path.join(BASE_DIR, 'embedding_matrix.npy')  # embedding_matrix
+NUMERIC_DATA = os.path.join(BASE_DIR, 'numeric_data.csv')  # 序号化后数据
+MODEL = os.path.join(BASE_DIR, '/backup/model_textcnn.h5')
 
 # Model Hyperparameters
 EMBEDDING_DIM = 300  # 词向量维数
@@ -43,62 +41,19 @@ FILTER_SIZES = [2, 3, 4, 5]  # 卷积核
 DROPOUT_RATE = 0.5
 HIDDEN_DIMS = 64
 VALIDATION_SPLIT = 0.2
+TEST_SPLIT = 0.2
 
 # Training parameters
 BATCH_SIZE = 64
-NUM_EPOCHS = 10
+NUM_EPOCHS = 1
 
 # Prepossessing parameters
-MAX_NUM_WORDS = 20000  # 词典最大词数，若语料中含词数超过该数，则取前MAX_NUM_WORDS个
+MAX_NUM_WORDS = 150000  # 词典最大词数，若语料中含词数超过该数，则取前MAX_NUM_WORDS个
 MAX_SEQUENCE_LENGTH = 2000  # 每篇文章最长词数
+NUM_LABELS = 6 # 分类数目
 
 
-# def text_cnn():
-#     """
-#     构建text_cnn模型
-#     :return:
-#     """
-#     # Inputs
-#     sequence_input = Input(shape=(MAX_SEQUENCE_LENGTH,), dtype='int32')
-#
-#     # Embeddings layers
-#     # load pre-trained word embeddings into an Embedding layer
-#     # note that we set trainable = False so as to keep the embeddings fixed
-#     embeddings_index = get_embeddings_index()
-#     word_index = get_word_index(texts)
-#     num_words = min(MAX_NUM_WORDS, len(word_index) + 1)
-#     embedding_matrix = get_embedding_matrix(embeddings_index, word_index)
-#     embedding_layer = Embedding(num_words,
-#                                 EMBEDDING_DIM,
-#                                 embeddings_initializer=Constant(embedding_matrix),
-#                                 input_length=MAX_SEQUENCE_LENGTH,
-#                                 trainable=False)
-#     embedded_sequences = embedding_layer(sequence_input)
-#
-#     # conv layers
-#     convs = []
-#     for filter_size in FILTER_SIZES:
-#         l_conv = Conv1D(filters=NUM_FILTERS,
-#                         kernel_size=filter_size,
-#                         activation='relu')(embedded_sequences)
-#         l_pool = MaxPooling1D(MAX_SEQUENCE_LENGTH - filter_size + 1)(l_conv)
-#         l_pool = Flatten()(l_pool)
-#         convs.append(l_pool)
-#     merge = concatenate(convs, axis=1)
-#
-#     x = Dropout(DROPOUT_RATE)(merge)
-#     x = Dense(32, activation='relu')(x)
-#
-#     preds = Dense(units=1, activation='sigmoid')(x)
-#
-#     model = Model(sequence_input, preds)
-#     model.compile(loss="categorical_crossentropy",
-#                   optimizer="rmsprop",
-#                   metrics=['acc'])
-#
-#     return model
-
-def text_cnn(word_index,embedding_matrix):
+def text_cnn():
     """
     构建text_cnn模型
     :return:
@@ -109,10 +64,8 @@ def text_cnn(word_index,embedding_matrix):
     # Embeddings layers
     # load pre-trained word embeddings into an Embedding layer
     # note that we set trainable = False so as to keep the embeddings fixed
-    # embeddings_index = get_embeddings_index()
-    # word_index = get_word_index(texts)
-    num_words = min(MAX_NUM_WORDS, len(word_index) + 1)
-    # embedding_matrix = get_embedding_matrix(embeddings_index, word_index)
+    embedding_matrix = np.load(EMBEDDING_MATRIX)
+    num_words = embedding_matrix.shape[0]+1
     embedding_layer = Embedding(num_words,
                                 EMBEDDING_DIM,
                                 embeddings_initializer=Constant(embedding_matrix),
@@ -137,6 +90,50 @@ def text_cnn(word_index,embedding_matrix):
     preds = Dense(units=1, activation='sigmoid')(x)
 
     model = Model(sequence_input, preds)
+    model.compile(loss="binary_crossentropy",
+                  optimizer="adam",
+                  metrics=['accuracy'])
+
+    return model
+
+
+def text_cnn_multi_class():
+    """
+    构建多分类text_cnn模型
+    :return:
+    """
+    # Inputs
+    sequence_input = Input(shape=(MAX_SEQUENCE_LENGTH,), dtype='int32')
+
+    # Embeddings layers
+    # load pre-trained word embeddings into an Embedding layer
+    # note that we set trainable = False so as to keep the embeddings fixed
+    embedding_matrix = np.load(EMBEDDING_MATRIX)
+    num_words = embedding_matrix.shape[0]+1
+    embedding_layer = Embedding(num_words,
+                                EMBEDDING_DIM,
+                                embeddings_initializer=Constant(embedding_matrix),
+                                input_length=MAX_SEQUENCE_LENGTH,
+                                trainable=False)
+    embedded_sequences = embedding_layer(sequence_input)
+
+    # conv layers
+    convs = []
+    for filter_size in FILTER_SIZES:
+        l_conv = Conv1D(filters=NUM_FILTERS,
+                        kernel_size=filter_size,
+                        activation='relu')(embedded_sequences)
+        l_pool = MaxPooling1D(MAX_SEQUENCE_LENGTH - filter_size + 1)(l_conv)
+        l_pool = Flatten()(l_pool)
+        convs.append(l_pool)
+    merge = concatenate(convs, axis=1)
+
+    x = Dropout(DROPOUT_RATE)(merge)
+    x = Dense(HIDDEN_DIMS, activation='relu')(x)
+
+    preds = Dense(units=NUM_LABELS, activation='softmax')(x)
+
+    model = Model(sequence_input, preds)
     model.compile(loss="categorical_crossentropy",
                   optimizer="rmsprop",
                   metrics=['acc'])
@@ -144,200 +141,106 @@ def text_cnn(word_index,embedding_matrix):
     return model
 
 
-def get_embeddings_index():
+def pre_processing():
     """
-    加载预训练word2vec模型，返回字典embeddings_index
-    :return: embeddings_index
-    """
-    embeddings_index = {}
-    with open(WORD2VEC_DIR) as f:
-        for line in f:
-            values = line.split()
-            word = values[0]
-            coefs = np.asarray(values[1:], dtype='float32')
-            embeddings_index[word] = coefs
-    print('Found %s word vectors.' % len(embeddings_index))
-    return embeddings_index
-
-
-def get_word_index(texts):
-    """
-    vectorize the text samples into a 2D integer tensor
-    :param texts:
+    预处理。获取训练集，测试集。
     :return:
     """
-    sentence = ''
-    for text in texts:
-        sentence = sentence+text
-        # seg_list = jieba.cut(text, cut_all=False)
-        # output = ' '.join(list(seg_list))
-    tags = jieba.analyse.extract_tags(sentence, topK=10, withWeight=False, allowPOS=())
-    d1 = {}
-    for i,tag in enumerate(tags):
-        d1[tag]=i+1
 
-    return d1
-
-
-def get_embedding_matrix(embeddings_index, word_index):
-    """
-    prepare embedding matrix
-    使用embeddings_index，word_index生成预训练矩阵embedding_matrix。
-    :param embeddings_index:
-    :param word_index:
-    :return:
-    """
-    num_words = min(MAX_NUM_WORDS, len(word_index) + 1)
-    embedding_matrix = np.zeros((num_words, EMBEDDING_DIM))
-    for word, i in word_index.items():
-        if i >= MAX_NUM_WORDS:
-            continue
-        embedding_vector = embeddings_index.get(word)
-        if embedding_vector is not None:
-            # words not found in embedding index will be all-zeros.
-            embedding_matrix[i] = embedding_vector
-    return embedding_matrix
-
-
-def pre_process():
-    tokenizer = Tokenizer(nb_words=MAX_NB_WORDS)
-    tokenizer.fit_on_texts(texts)
-    sequences = tokenizer.texts_to_sequences(texts)
-
-    word_index = tokenizer.word_index
-    print('Found %s unique tokens.' % len(word_index))
-
-    data = pad_sequences(sequences, maxlen=MAX_SEQUENCE_LENGTH)
-
-    labels = to_categorical(np.asarray(labels))
+    # 获取数字化的数据集
+    d1 = pd.read_csv(NUMERIC_DATA)
+    d1['index_array'] = d1['indexes'].map(lambda x: x.split(' '))
+    sequences = d1['index_array']
+    data = pad_sequences(sequences, maxlen=MAX_SEQUENCE_LENGTH, padding='post')
+    labels = d1['label'].values.reshape(-1, 1)
     print('Shape of data tensor:', data.shape)
     print('Shape of label tensor:', labels.shape)
 
-    # 切分成测试集和验证集
-    indices = np.arange(data.shape[0])
+    # 切分训练集和测试集
+    data_size = data.shape[0]
+    indices = np.arange(data_size)
     np.random.shuffle(indices)
     data = data[indices]
     labels = labels[indices]
-    nb_validation_samples = int(VALIDATION_SPLIT * data.shape[0])
+    train_test_samples = int(TEST_SPLIT * data_size)
 
-    x_train = data[:-nb_validation_samples]
-    y_train = labels[:-nb_validation_samples]
-    x_val = data[-nb_validation_samples:]
-    y_val = labels[-nb_validation_samples:]
-    return word_index, x_train, y_train, x_val, y_val
-
-
-def get_texts_and_labels():
-    """
-    prepare text samples and their labels
-    :return:
-    """
-    texts = []  # list of text samples
-    labels_index = {}  # dictionary mapping label name to numeric id
-    labels = []  # list of label ids
-    for name in sorted(os.listdir(TEXT_DATA_DIR)):
-        path = os.path.join(TEXT_DATA_DIR, name)
-        if os.path.isdir(path):
-            label_id = len(labels_index)
-            labels_index[name] = label_id
-            for fname in sorted(os.listdir(path)):
-                if fname.isdigit():
-                    fpath = os.path.join(path, fname)
-                    args = {} if sys.version_info < (3,) else {'encoding': 'utf-8'}
-                    with open(fpath, **args) as f:
-                        t = f.read()
-                        i = t.find('\n\n')  # skip header
-                        if 0 < i:
-                            t = t[i:]
-                        texts.append(t)
-                    labels.append(label_id)
-    print('Found %s texts.' % len(texts))
-    return texts, labels_index, labels
-
-
-# def text_cnn(maxlen=150, max_features=2000, embed_size=32):
-#     # Inputs
-#     comment_seq = Input(shape=[maxlen], name='x_seq')
-#
-#     # Embeddings layers
-#     emb_comment = Embedding(max_features, embed_size)(comment_seq)
-#
-#     # conv layers
-#     convs = []
-#     filter_sizes = [2, 3, 4, 5]
-#     for fsz in filter_sizes:
-#         l_conv = Conv1D(filters=100, kernel_size=fsz, activation='relu')(emb_comment)
-#         l_pool = MaxPooling1D(maxlen - fsz + 1)(l_conv)
-#         l_pool = Flatten()(l_pool)
-#         convs.append(l_pool)
-#     merge = concatenate(convs, axis=1)
-#
-#     out = Dropout(0.5)(merge)
-#     output = Dense(32, activation='relu')(out)
-#
-#     output = Dense(units=1, activation='sigmoid')(output)
-#
-#     model = Model([comment_seq], output)
-#     #     adam = optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
-#     model.compile(loss="binary_crossentropy", optimizer="adam", metrics=['accuracy'])
-#
-#     return model
-
-
-def text_to_index_array(word2vec_dict, text):  # 文本转为索引数字模式
-    new_sentences = []
-    for sen in text:
-        new_sen = []
-        for word in sen:
-            try:
-                new_sen.append(word2vec_dict[word])  # 单词转索引数字
-            except:
-                new_sen.append(0)  # 索引字典里没有的词转为数字0
-        new_sentences.append(new_sen)
-
-    return np.array(new_sentences)
-
-
-def get_training_set_and_validation_set(data, labels):
-    """
-    split the data into a training set and a validation set
-    :return:
-    """
-    indices = np.arange(data.shape[0])
-    np.random.shuffle(indices)
-    data = data[indices]
-    labels = labels[indices]
-    num_validation_samples = int(VALIDATION_SPLIT * data.shape[0])
-
-    x_train = data[:-num_validation_samples]
-    y_train = labels[:-num_validation_samples]
-    x_val = data[-num_validation_samples:]
-    y_val = labels[-num_validation_samples:]
-
-    return x_train, y_train, x_val, y_val
-
-
-def preprocessing(train_texts, train_labels, test_texts, test_labels):
-    tokenizer = Tokenizer(num_words=2000)  # 建立一个2000个单词的字典
-    tokenizer.fit_on_texts(train_texts)
-    # 对每一句影评文字转换为数字列表，使用每个词的编号进行编号
-    x_train_seq = tokenizer.texts_to_sequences(train_texts)
-    x_test_seq = tokenizer.texts_to_sequences(test_texts)
-    x_train = sequence.pad_sequences(x_train_seq, maxlen=150)
-    x_test = sequence.pad_sequences(x_test_seq, maxlen=150)
-    y_train = np.array(train_labels)
-    y_test = np.array(test_labels)
+    x_train = data[:-train_test_samples]
+    y_train = labels[:-train_test_samples]
+    x_test = data[-train_test_samples:]
+    y_test = labels[-train_test_samples:]
+    print('Shape of data x_train:', x_train.shape)
+    print('Shape of label y_train:', y_train.shape)
+    print('Shape of data x_test:', x_test.shape)
+    print('Shape of label y_test:', y_test.shape)
     return x_train, y_train, x_test, y_test
 
 
+def pre_processing_multi_class():
+    """
+    预处理。获取训练集，测试集。
+    :return:
+    """
+
+    # 获取数字化的数据集
+    d1 = pd.read_csv(NUMERIC_DATA)
+    d1['index_array'] = d1['indexes'].map(lambda x: x.split(' '))
+    sequences = d1['index_array']
+    data = pad_sequences(sequences, maxlen=MAX_SEQUENCE_LENGTH, padding='post')
+    labels = d1['label'].values.reshape(-1, 1)
+    labels = to_categorical(labels)
+    print('Shape of data tensor:', data.shape)
+    print('Shape of label tensor:', labels.shape)
+
+    # 切分训练集和测试集
+    data_size = data.shape[0]
+    indices = np.arange(data_size)
+    np.random.shuffle(indices)
+    data = data[indices]
+    labels = labels[indices]
+    train_test_samples = int(TEST_SPLIT * data_size)
+
+    x_train = data[:-train_test_samples]
+    y_train = labels[:-train_test_samples]
+    x_test = data[-train_test_samples:]
+    y_test = labels[-train_test_samples:]
+    print('Shape of data x_train:', x_train.shape)
+    print('Shape of label y_train:', y_train.shape)
+    print('Shape of data x_test:', x_test.shape)
+    print('Shape of label y_test:', y_test.shape)
+    return x_train, y_train, x_test, y_test
+
+
+def test():
+    # 获取text set
+    DATA_TEST = '/data0/search/textcnn/data/data_55.txt'
+    df = pd.read_csv(DATA_TEST, header=None, names=['doc'])
+    df['label'] = 5
+    df['tokens'] = df['doc'].map(segment)
+    df['indexes'] = df['tokens'].map(word2index)
+    df['index_array'] = df['indexes'].map(lambda x: x.split(' '))
+    sequences = df['index_array']
+    x_test = pad_sequences(sequences, maxlen=MAX_SEQUENCE_LENGTH, padding='post')
+    labels = df['label'].values.reshape(-1, 1)
+    y_test = to_categorical(labels)
+
+    # 加载模型，评估
+    model_path = '/data0/search/textcnn/data/backup/model_textcnn_015_20180913.h5'
+    model = load_model(model_path)
+    scores = model.evaluate(x_test, y_test)
+    print('test_loss: %f, accuracy: %f' % (scores[0], scores[1]))
+
+
 if __name__ == "__main__":
-    x_train, y_train, x_val, y_val, x_test, y_test = preprocessing()
-    model = text_cnn()
+    x_train, y_train, x_test, y_test = pre_processing_multi_class()
+    model = text_cnn_multi_class()
     model.summary()
     model.fit(x_train, y_train,
               batch_size=BATCH_SIZE,
               epochs=NUM_EPOCHS,
-              validation_data=(x_val, y_val),
+              validation_split=VALIDATION_SPLIT,
               shuffle=True)
-    scores = model.eveluate(x_test, y_test)
+    scores = model.evaluate(x_test, y_test)
     print('test_loss: %f, accuracy: %f' % (scores[0], scores[1]))
+
+    # model.save(MODEL)
+    # model = load_model(MODEL)
