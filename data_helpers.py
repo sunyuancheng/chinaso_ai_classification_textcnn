@@ -100,15 +100,15 @@ def pre_process(skip_download=False):
     # 添加标签
     df0 = pd.read_csv(DATA_0, header=None, names=['doc'])
     df0['label'] = 0
-    print('get data 0' + len(df0))
+    print('get data 0' + str(len(df0)))
     df1 = pd.read_csv(DATA_1, header=None, names=['doc'])
     df1['label'] = 1
-    print('get data 0' + len(df0))
+    print('get data 1' + str(len(df1)))
     df5 = pd.read_csv(DATA_5, header=None, names=['doc'])
     df5['label'] = 5
-    print('get data 0' + len(df0))
+    print('get data 5' + str(len(df5)))
     all_data = df0.append(df1, ignore_index=True).append(df5, ignore_index=True)
-    print('all data size=' + len())
+    print('all data size=' + str(len(all_data)))
 
     # all_data = get_labeled_data()
 
