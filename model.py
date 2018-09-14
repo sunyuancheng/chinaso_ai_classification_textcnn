@@ -210,6 +210,26 @@ def pre_processing_multi_class():
     return x_train, y_train, x_test, y_test
 
 
+def test():
+    # 获取text set
+    DATA_TEST = '/data0/search/textcnn/data/data_55.txt'
+    df = pd.read_csv(DATA_TEST, header=None, names=['doc'])
+    df['label'] = 5
+    df['tokens'] = df['doc'].map(segment)
+    df['indexes'] = df['tokens'].map(word2index)
+    df['index_array'] = df['indexes'].map(lambda x: x.split(' '))
+    sequences = df['index_array']
+    x_test = pad_sequences(sequences, maxlen=MAX_SEQUENCE_LENGTH, padding='post')
+    labels = df['label'].values.reshape(-1, 1)
+    y_test = to_categorical(labels)
+
+    # 加载模型，评估
+    model_path = '/data0/search/textcnn/data/backup/model_textcnn_015_20180913.h5'
+    model = load_model(model_path)
+    scores = model.evaluate(x_test, y_test)
+    print('test_loss: %f, accuracy: %f' % (scores[0], scores[1]))
+
+
 if __name__ == "__main__":
     x_train, y_train, x_test, y_test = pre_processing_multi_class()
     model = text_cnn_multi_class()

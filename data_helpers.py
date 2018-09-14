@@ -90,29 +90,10 @@ def pre_process(skip_download=False):
     :param skip_download: 是否跳过数据下载
     :return:
     """
-    # 如果需要下载，通过接口下载数据，并保存结果至csv
-    if not skip_download:
-        get_data_0_from_api()
-        get_data_1_from_api()
-        get_data_5_from_api()
-    print('download and save')
-
-    # 添加标签
-    # df0 = pd.read_csv(DATA_0, header=None, names=['doc'])
-    # df0['label'] = 0
-    # print('get data 0' + str(len(df0)))
-    # df1 = pd.read_csv(DATA_1, header=None, names=['doc'])
-    # df1['label'] = 1
-    # print('get data 1' + str(len(df1)))
-    # df5 = pd.read_csv(DATA_5, header=None, names=['doc'])
-    # df5['label'] = 5
-    # print('get data 5' + str(len(df5)))
-    # all_data = df0.append(df1, ignore_index=True).append(df5, ignore_index=True)
-    # print('all data size=' + str(len(all_data)))
-
+    # 获取下载数据，并添加标签
     all_data = get_labeled_data()
     all_data = all_data.sample(frac=1)
-    print('get data, size = '+str(len(all_data)))
+    print('get download data, size = ' + str(len(all_data)))
     print('set labels')
 
     # 合并正例反例，分词，打乱顺序，并保存结果至csv:SEG_DATA
@@ -125,14 +106,9 @@ def pre_process(skip_download=False):
     seg_data_shuffled.to_csv(SEG_DATA_SHUFFLED, encoding='utf-8')
     print('shuffle and save to ' + SEG_DATA_SHUFFLED)
 
-    # 获取word_index，并保存结果至csv:WORD_INDEX
+    # 获取word_index，并保存结果至npy:WORD_INDEX
     word_index = get_word_index(seg_data_shuffled)
-
-    # word_index_df = DataFrame(list(word_index.items()), columns=['word', 'index'])
-    # word_index_df.to_csv(WORD_INDEX, encoding='utf-8')
     np.save(WORD_INDEX, word_index)
-    # 读取
-    # word_index = np.load(WORD_INDEX)[()]
     print('getting word_index and save to ' + WORD_INDEX)
 
     # 语料数字化：将分词列表替换成序号列表，并保存结果至csv:NUMERIC_DATA
@@ -149,8 +125,6 @@ def pre_process(skip_download=False):
     embedding_matrix = generate_embedding_matrix(embeddings_index)
     np.save(EMBEDDING_MATRIX, embedding_matrix)
     print('generate_embedding_matrix and save to' + EMBEDDING_MATRIX)
-
-
 
 
 def get_labeled_data():
@@ -171,6 +145,62 @@ def get_labeled_data():
                 df['label'] = label
                 all_data = all_data.append(df, ignore_index=True)
     return all_data
+
+
+def segment(input_string):
+    """
+    分词
+    :param input_string:
+    :return:
+    """
+    seg_origin = SEG_SPLITTER.join(jieba.cut(input_string, cut_all=False))
+    seg_origin_list = seg_origin.split(SEG_SPLITTER)
+    seg_stop_list = [word for word in seg_origin_list if word not in stop_words]
+    return SEG_SPLITTER.join(seg_stop_list)
+
+
+def get_word_index(df):
+    """
+    统计语料分词词典，按照词频由大到小排序
+    :param d0:
+    :param d1:
+    :return:
+    """
+    word_dict = {}
+    for tokens in df['tokens']:
+        words = tokens.split(SEG_SPLITTER)
+        for word in words:
+            if word in word_dict.keys():
+                count = word_dict[word]
+                word_dict[word] = count + 1
+            else:
+                word_dict[word] = 1
+    word_dict = sorted(word_dict.items(), key=lambda x: x[1], reverse=True)
+    for i, word in enumerate(word_dict):
+        w = word[0]
+        word_index[w] = i + 1
+    return word_index
+
+
+def word2index(tokens):
+    """
+    将输入的tokens转换成word_index中的序号
+    :param tokens:
+    :return:
+    """
+    word_list = tokens.split(SEG_SPLITTER)
+    indexes = []
+    for word in word_list:
+        if word is not None:
+            if word in word_index.keys():
+                index = word_index[word]
+                if index > MAX_NUM_WORDS:
+                    indexes.append('0')
+                else:
+                    indexes.append(str(index))
+            else:
+                indexes.append('0')
+    return SEG_SPLITTER.join(indexes).strip()
 
 
 def get_embeddings_index():
@@ -209,115 +239,5 @@ def generate_embedding_matrix(embeddings_index):
     return embedding_matrix
 
 
-def word2index(tokens):
-    """
-    将输入的tokens转换成word_index中的序号
-    :param tokens:
-    :return:
-    """
-    word_list = tokens.split(SEG_SPLITTER)
-    indexes = []
-    for word in word_list:
-        if word is not None:
-            if word in word_index.keys():
-                index = word_index[word]
-                if index > MAX_NUM_WORDS:
-                    indexes.append('0')
-                else:
-                    indexes.append(str(index))
-            else:
-                indexes.append('0')
-    return SEG_SPLITTER.join(indexes).strip()
-
-
-def segment(input_string):
-    """
-    分词
-    :param input_string:
-    :return:
-    """
-    seg_origin = SEG_SPLITTER.join(jieba.cut(input_string, cut_all=False))
-    seg_origin_list = seg_origin.split(SEG_SPLITTER)
-    seg_stop_list = [word for word in seg_origin_list if word not in stop_words]
-    return SEG_SPLITTER.join(seg_stop_list)
-
-
-def get_data_0_from_api():
-    """
-    通过接口获取新闻数据，并保存至文件
-    含有简单文本过滤，并替换CSV文件分隔符：英文逗号
-    :return:
-    """
-    with open(DATA_0, 'w') as f:
-        with urllib.request.urlopen(URL_1) as response:
-            resp = response.read()
-            j1 = json.loads(resp)
-            results = j1['value']
-            for result in results:
-                line = result.get('wcaption') \
-                    .replace(',', '，') \
-                    .replace('|', '')
-                f.write(line + '\n')
-
-
-def get_data_1_from_api():
-    """
-    通过接口获得反例恐怖数据，并保存至文件
-    含有简单文本过滤，并替换CSV文件分隔符：英文逗号
-    :return:
-    """
-    with open(DATA_1, 'w') as f:
-        with urllib.request.urlopen(URL_0) as response:
-            resp = response.read()
-            j1 = json.loads(resp)
-            results = j1['value']
-            for result in results:
-                line = result.get('wcaption') \
-                    .replace(',', '，') \
-                    .replace('免费订阅精彩鬼故事，微信号：guidayecom', '')
-                f.write(line + '\n')
-
-
-def get_data_5_from_api():
-    """
-    通过接口获取正例色情数据，并保存至文件
-    含有简单文本过滤，并替换CSV文件分隔符：英文逗号
-    :return:
-    """
-    with open(DATA_5, 'w') as f:
-        with urllib.request.urlopen(URL_5) as response:
-            resp = response.read()
-            j1 = json.loads(resp)
-            results = j1['value']
-            for result in results:
-                line = result.get('wcaption') \
-                    .replace(',', '，')
-                f.write(line + '\n')
-
-
-def get_word_index(df):
-    """
-    统计语料分词词典，按照词频由大到小排序
-    :param d0:
-    :param d1:
-    :return:
-    """
-    word_dict = {}
-    for tokens in df['tokens']:
-        words = tokens.split(SEG_SPLITTER)
-        for word in words:
-            if word in word_dict.keys():
-                count = word_dict[word]
-                word_dict[word] = count + 1
-            else:
-                word_dict[word] = 1
-    word_dict = sorted(word_dict.items(), key=lambda x: x[1], reverse=True)
-    word_dict = word_dict[1:]  # 去除空字符
-    for i, word in enumerate(word_dict):
-        w = word[0]
-        word_index[w] = i + 1
-    return word_index
-
-
 if __name__ == '__main__':
-    pre_process(skip_download=True)
+    pre_process()

@@ -22,6 +22,8 @@ import urllib
 import os
 import json
 
+LABEL_INDEX = {'news': 0, 'horror': 1, 'violence': 2, 'dirty_words': 3, 'suicide': 4, 'sex': 5}
+
 # 新闻数据接口
 URL_0 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01276/search' \
         '?fields=id,wcaption&filters=EQS_ifCompare,1|EQS_resourceState,4|EQS_newsLabelSecond,' \
@@ -36,13 +38,16 @@ URL_1 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search'
 # 反例数据接口：色情
 URL_5 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search' \
         '?fields=id,wcaption&filters=EQS_resourceState,4' \
-        '|EQS_newsLabel,%E8%89%B2%E6%83%85|EQS_newsLabelSecond,色情小说&pagestart=1&fetchsize=10000'
+        '|EQS_newsLabel,%E8%89%B2%E6%83%85&pagestart=1&fetchsize=10000'
+
 
 # 数据保存地址
 BASE_DIR = '/data0/search/textcnn/data/'
-DATA_0 = os.path.join(BASE_DIR, '/dataset/data_0.txt')  # 新闻语料
-DATA_1 = os.path.join(BASE_DIR, '/dataset/data_1.txt')  # 反例恐怖语料
-DATA_5 = os.path.join(BASE_DIR, '/dataset/data_5.txt')  # 反例色情语料
+DATASET = os.path.join(BASE_DIR, 'dataset/')  # 数据集文件夹
+DATA_0 = os.path.join(BASE_DIR, 'dataset/news/data_0.txt')  # 新闻语料
+DATA_1 = os.path.join(BASE_DIR, 'dataset/horror/data_1.txt')  # 反例恐怖语料
+DATA_5 = os.path.join(BASE_DIR, 'dataset/sex/data_5.txt')  # 反例色情语料
+DATA_TEST = os.path.join(BASE_DIR, 'data_55.txt')
 
 
 def download():
