@@ -34,9 +34,15 @@ URL_1 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search'
         '|EQS_newsLabel,%E6%81%90%E6%80%96&pagestart=1&fetchsize=10000'
 
 # 反例数据接口：色情
-URL_5 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search' \
-        '?fields=id,wcaption&filters=EQS_resourceState,4' \
-        '|EQS_newsLabel,%E8%89%B2%E6%83%85&pagestart=1&fetchsize=10000'
+URL_5_1 =  'http://data.mgt.chinaso365.com/datasrv/1.0/resources/01344/search' \
+         '?fields=id,wcaption&filters=EQS_resourceState,4' \
+         '|EQS_newsLabel,%E8%89%B2%E6%83%85%7CNES_newsLabelSecond,%E8%89%B2%E6%83%85%E5%B0%8F%E8%AF%B4' \
+         '&pagestart=1&fetchsize=15'
+
+URL_5_2 = 'http://data.mgt.chinaso365.com/datasrv/1.0/resources/01344/search' \
+              '?fields=id,wcaption,picSet&filters=EQS_resourceState,4' \
+              '|EQS_newsLabel,%E8%89%B2%E6%83%85%7CEQS_newsLabelSecond,%E8%89%B2%E6%83%85%E5%B0%8F%E8%AF%B4' \
+              '&pagestart=1&fetchsize=10'
 
 label_index = {'news': 0, 'horror': 1, 'violence': 2, 'dirty_words': 3, 'suicide': 4, 'sex': 5}
 
@@ -45,14 +51,16 @@ BASE_DIR = '/data0/search/textcnn/data/'
 DATASET = os.path.join(BASE_DIR, 'dataset/')  # 数据集文件夹
 DATA_0 = os.path.join(BASE_DIR, 'dataset/news/data_0.txt')  # 新闻语料
 DATA_1 = os.path.join(BASE_DIR, 'dataset/horror/data_1.txt')  # 反例恐怖语料
-DATA_5 = os.path.join(BASE_DIR, 'dataset/sex/data_5.txt')  # 反例色情语料
+DATA_5_1 = os.path.join(BASE_DIR, 'dataset/sex/data_5_1.txt')  # 反例色情语料
+DATA_5_2 = os.path.join(BASE_DIR, 'dataset/sex/data_5_2.txt')  # 反例色情语料
 DATA_TEST = os.path.join(BASE_DIR, 'data_55.txt')
 
 
 def download():
     get_data_0_from_api()
     get_data_1_from_api()
-    get_data_5_from_api()
+    get_data_51_from_api()
+    get_data_52_from_api()
 
 
 def get_data_0_from_api():
@@ -91,14 +99,14 @@ def get_data_1_from_api():
                 f.write(line + '\n')
 
 
-def get_data_5_from_api():
+def get_data_51_from_api():
     """
     通过接口获取正例色情数据，并保存至文件
     含有简单文本过滤，并替换CSV文件分隔符：英文逗号
     :return:
     """
-    with open(DATA_5, 'w') as f:
-        with urllib.request.urlopen(URL_5) as response:
+    with open(DATA_5_1, 'w') as f:
+        with urllib.request.urlopen(URL_5_1) as response:
             resp = response.read()
             j1 = json.loads(resp)
             results = j1['value']
@@ -106,3 +114,18 @@ def get_data_5_from_api():
                 line = result.get('wcaption') \
                     .replace(',', '，')
                 f.write(line + '\n')
+               
+def get_data_52_from_api():
+    with open(DATA_5_2, 'w') as f:
+        with urllib.request.urlopen(URL_5_2) as response:
+            resp = response.read()
+            captions = json.loads(resp)
+            for item in captions:
+                caption = item.get('wcaption')
+                if item.get('picSet') != None:
+                    for pic in item.get('picSet'):
+                        caption = caption + pic.get('caption')
+                line = caption.replace('(转载请注明来源cna5两性网www.cna5.cc)', '').replace('性爱 CNA5两性健康网', '').replace('CNA5两性健康网', '')                 
+                if len(line)>int(100):
+                    f.write(line + '\n')
+
