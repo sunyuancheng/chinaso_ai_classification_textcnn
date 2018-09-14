@@ -18,39 +18,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ========================================================================
-import urllib
 import numpy as np
 import pandas as pd
-from pandas.core.frame import DataFrame
-import json
 import jieba
 import os
 
 LABEL_INDEX = {'news': 0, 'horror': 1, 'violence': 2, 'dirty_words': 3, 'suicide': 4, 'sex': 5}
 
-# 新闻数据接口
-URL_0 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01276/search' \
-        '?fields=id,wcaption&filters=EQS_ifCompare,1|EQS_resourceState,4|EQS_newsLabelSecond,' \
-        '%E6%97%B6%E6%94%BF%E6%BB%9A%E5%8A%A8&orders=wpubTime_desc' \
-        '&pagestart=1&fetchsize=10000'
-
-# 反例数据接口：恐怖
-URL_1 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search' \
-        '?fields=id,wcaption&filters=EQS_resourceState,4' \
-        '|EQS_newsLabel,%E6%81%90%E6%80%96&pagestart=1&fetchsize=10000'
-
-# 反例数据接口：色情
-URL_5 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search' \
-        '?fields=id,wcaption&filters=EQS_resourceState,4' \
-        '|EQS_newsLabel,%E8%89%B2%E6%83%85&pagestart=1&fetchsize=10000'
-
 # 数据保存地址
 BASE_DIR = '/data0/search/textcnn/data/'
 DATASET = os.path.join(BASE_DIR, 'dataset/')  # 数据集文件夹
-DATA_0 = os.path.join(BASE_DIR, 'dataset/news/data_0.txt')  # 新闻语料
-DATA_1 = os.path.join(BASE_DIR, 'dataset/horror/data_1.txt')  # 反例恐怖语料
-DATA_5 = os.path.join(BASE_DIR, 'dataset/sex/data_5.txt')  # 反例色情语料
-DATA_TEST = os.path.join(BASE_DIR, 'data_55.txt')
 SEG_DATA = os.path.join(BASE_DIR, 'seg_data.csv')  # 分词后数据
 SEG_DATA_SHUFFLED = os.path.join(BASE_DIR, 'seg_data_shuffled.csv')  # 分词后数据
 WORD_INDEX = os.path.join(BASE_DIR, 'word_index.npy')  # word_index
