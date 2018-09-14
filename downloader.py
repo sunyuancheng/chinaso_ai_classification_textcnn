@@ -22,8 +22,6 @@ import urllib
 import os
 import json
 
-LABEL_INDEX = {'news': 0, 'horror': 1, 'violence': 2, 'dirty_words': 3, 'suicide': 4, 'sex': 5}
-
 # 新闻数据接口
 URL_0 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01276/search' \
         '?fields=id,wcaption&filters=EQS_ifCompare,1|EQS_resourceState,4|EQS_newsLabelSecond,' \
@@ -40,6 +38,7 @@ URL_5 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search'
         '?fields=id,wcaption&filters=EQS_resourceState,4' \
         '|EQS_newsLabel,%E8%89%B2%E6%83%85&pagestart=1&fetchsize=10000'
 
+label_index = {'news': 0, 'horror': 1, 'violence': 2, 'dirty_words': 3, 'suicide': 4, 'sex': 5}
 
 # 数据保存地址
 BASE_DIR = '/data0/search/textcnn/data/'
@@ -107,5 +106,3 @@ def get_data_5_from_api():
                 line = result.get('wcaption') \
                     .replace(',', '，')
                 f.write(line + '\n')
-
-

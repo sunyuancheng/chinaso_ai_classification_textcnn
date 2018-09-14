@@ -23,7 +23,6 @@ import pandas as pd
 import jieba
 import os
 
-LABEL_INDEX = {'news': 0, 'horror': 1, 'violence': 2, 'dirty_words': 3, 'suicide': 4, 'sex': 5}
 
 # 数据保存地址
 BASE_DIR = '/data0/search/textcnn/data/'
@@ -43,6 +42,7 @@ MAX_NUM_WORDS = 150000  # 词典最大词数，若语料中含词数超过该数
 SEG_SPLITTER = ' '
 # CSV_SPLITTER = ','
 
+label_index = {'news': 0, 'horror': 1, 'violence': 2, 'dirty_words': 3, 'suicide': 4, 'sex': 5}
 word_index = {}
 
 # 打开停用词表并做处理
@@ -112,8 +112,8 @@ def get_labeled_data():
     all_data = pd.DataFrame()
     for name in sorted(os.listdir(DATASET)):
         path = os.path.join(DATASET, name)
-        if name in LABEL_INDEX:
-            label = LABEL_INDEX[name]
+        if name in label_index:
+            label = label_index[name]
         if os.path.isdir(path):
             for fname in sorted(os.listdir(path)):
                 single_data_path = os.path.join(path, fname)
