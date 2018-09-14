@@ -26,7 +26,8 @@ import json
 import jieba
 import os
 
-LABEL_INDEX = {'新闻':0,'恐怖':1,'暴力':2,'脏话':3,'自杀':4,'色情':5}
+# LABEL_INDEX = {'新闻':0,'恐怖':1,'暴力':2,'脏话':3,'自杀':4,'色情':5}
+LABEL_INDEX = {'news':0,'horror':1,'violence':2,'dirty_words':3,'suicide':4,'sex':5}
 # LABEL_INDEX = {'恐怖': 1, '正常': 0}
 
 # 新闻数据接口
@@ -47,9 +48,10 @@ URL_5 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search'
 
 # 数据保存地址
 BASE_DIR = '/data0/search/textcnn/data/'
-DATA_0 = os.path.join(BASE_DIR, 'data_0.txt')  # 新闻语料
-DATA_1 = os.path.join(BASE_DIR, 'data_1.txt')  # 反例恐怖语料
-DATA_5 = os.path.join(BASE_DIR, 'data_5.txt')  # 反例色情语料
+DATASET = os.path.join(BASE_DIR, 'dataset/')  # 数据集文件夹
+DATA_0 = os.path.join(BASE_DIR, 'dataset/news/data_0.txt')  # 新闻语料
+DATA_1 = os.path.join(BASE_DIR, 'dataset/horror/data_1.txt')  # 反例恐怖语料
+DATA_5 = os.path.join(BASE_DIR, 'dataset/sex/data_5.txt')  # 反例色情语料
 SEG_DATA = os.path.join(BASE_DIR, 'seg_data.csv')  # 分词后数据
 WORD_INDEX = os.path.join(BASE_DIR, 'word_index.csv')  # word_index
 NUMERIC_DATA = os.path.join(BASE_DIR, 'numeric_data.csv')  # 序号化后数据
@@ -95,6 +97,30 @@ def pre_process(skip_download=False):
         get_data_5_from_api()
     print('download and save')
 
+
+    all_data = get_labeled_data()
+
+    texts = []  # list of text samples
+    labels_index = {}  # dictionary mapping label name to numeric id
+    labels = []  # list of label ids
+    for name in sorted(os.listdir(DATASET)):
+        path = os.path.join(DATASET, name)
+        if os.path.isdir(path):
+            for fname in sorted(os.listdir(path)):
+                print(os.path.join(path, fname))
+            # label_id = len(labels_index)
+            # labels_index[name] = label_id
+            # for fname in sorted(os.listdir(path)):
+            #     if fname.isdigit():
+            #         fpath = os.path.join(path, fname)
+            #         args = {} if sys.version_info < (3,) else {'encoding': 'latin-1'}
+            #         with open(fpath, **args) as f:
+            #             t = f.read()
+            #             i = t.find('\n\n')  # skip header
+            #             if 0 < i:
+            #                 t = t[i:]
+            #             texts.append(t)
+
     # 添加标签
     df0 = pd.read_csv(DATA_0, header=None, names=['doc'])
     df0['label'] = 0
@@ -131,6 +157,27 @@ def pre_process(skip_download=False):
     embedding_matrix = generate_embedding_matrix(embeddings_index)
     np.save(EMBEDDING_MATRIX, embedding_matrix)
     print('generate_embedding_matrix and save to' + EMBEDDING_MATRIX)
+
+
+
+def get_labeled_data():
+    """
+    从文档中读取dataframe，并增加标签
+    :return:
+    """
+    all_data = pd.DataFrame()
+    for name in sorted(os.listdir(DATASET)):
+        path = os.path.join(DATASET, name)
+        if name in LABEL_INDEX:
+            label = LABEL_INDEX[name]
+        if os.path.isdir(path):
+            for fname in sorted(os.listdir(path)):
+                single_data_path = os.path.join(path, fname)
+                print(single_data_path)
+                df = pd.read_csv(single_data_path, header=None, names=['doc'])[:10]
+                df['label'] = label
+                all_data = all_data.append(df, ignore_index=True)
+    return all_data
 
 
 def get_embeddings_index():
@@ -278,4 +325,4 @@ def get_word_index(df):
 
 
 if __name__ == '__main__':
-    pre_process(skip_download=False)
+    pre_process(skip_download=True)
