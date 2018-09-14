@@ -27,7 +27,7 @@ import jieba
 import os
 
 # LABEL_INDEX = {'新闻':0,'恐怖':1,'暴力':2,'脏话':3,'自杀':4,'色情':5}
-LABEL_INDEX = {'news':0,'horror':1,'violence':2,'dirty_words':3,'suicide':4,'sex':5}
+LABEL_INDEX = {'news': 0, 'horror': 1, 'violence': 2, 'dirty_words': 3, 'suicide': 4, 'sex': 5}
 # LABEL_INDEX = {'恐怖': 1, '正常': 0}
 
 # 新闻数据接口
@@ -98,17 +98,23 @@ def pre_process(skip_download=False):
     print('download and save')
 
     # 添加标签
-    # df0 = pd.read_csv(DATA_0, header=None, names=['doc'])
-    # df0['label'] = 0
-    # df1 = pd.read_csv(DATA_1, header=None, names=['doc'])
-    # df1['label'] = 1
-    # df5 = pd.read_csv(DATA_5, header=None, names=['doc'])
-    # df5['label'] = 5
-    all_data = get_labeled_data()
+    df0 = pd.read_csv(DATA_0, header=None, names=['doc'])
+    df0['label'] = 0
+    print('get data 0' + len(df0))
+    df1 = pd.read_csv(DATA_1, header=None, names=['doc'])
+    df1['label'] = 1
+    print('get data 0' + len(df0))
+    df5 = pd.read_csv(DATA_5, header=None, names=['doc'])
+    df5['label'] = 5
+    print('get data 0' + len(df0))
+    all_data = df0.append(df1, ignore_index=True).append(df5, ignore_index=True)
+    print('all data size=' + len())
+
+    # all_data = get_labeled_data()
+
     print('get data and set labels')
 
     # 合并正例反例，分词，打乱顺序，并保存结果至csv:SEG_DATA
-    # all_data = df0.append(df1, ignore_index=True).append(df5, ignore_index=True)
     all_data['tokens'] = all_data['doc'].map(segment)
     seg_data = all_data[['tokens', 'label']]
     seg_data = seg_data.sample(frac=1)
@@ -139,7 +145,6 @@ def pre_process(skip_download=False):
     embedding_matrix = generate_embedding_matrix(embeddings_index)
     np.save(EMBEDDING_MATRIX, embedding_matrix)
     print('generate_embedding_matrix and save to' + EMBEDDING_MATRIX)
-
 
 
 def get_labeled_data():
