@@ -106,3 +106,7 @@ def get_data_5_from_api():
                 line = result.get('wcaption') \
                     .replace(',', '，')
                 f.write(line + '\n')
+
+
+if __name__ == '__main__':
+    download()
