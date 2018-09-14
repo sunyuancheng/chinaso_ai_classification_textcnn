@@ -32,7 +32,7 @@ import pandas as pd
 BASE_DIR = '/data0/search/textcnn/data/'
 EMBEDDING_MATRIX = os.path.join(BASE_DIR, 'embedding_matrix.npy')  # embedding_matrix
 NUMERIC_DATA = os.path.join(BASE_DIR, 'numeric_data.csv')  # 序号化后数据
-MODEL = os.path.join(BASE_DIR, 'model_textcnn_015.h5')
+MODEL = os.path.join(BASE_DIR, '/backup/model_textcnn.h5')
 
 # Model Hyperparameters
 EMBEDDING_DIM = 300  # 词向量维数
@@ -208,52 +208,6 @@ def pre_processing_multi_class():
     print('Shape of data x_test:', x_test.shape)
     print('Shape of label y_test:', y_test.shape)
     return x_train, y_train, x_test, y_test
-
-
-# def text_to_index_array(word2vec_dict, text):  # 文本转为索引数字模式
-#     new_sentences = []
-#     for sen in text:
-#         new_sen = []
-#         for word in sen:
-#             try:
-#                 new_sen.append(word2vec_dict[word])  # 单词转索引数字
-#             except:
-#                 new_sen.append(0)  # 索引字典里没有的词转为数字0
-#         new_sentences.append(new_sen)
-#
-#     return np.array(new_sentences)
-
-
-# def get_training_set_and_validation_set(data, labels):
-#     """
-#     split the data into a training set and a validation set
-#     :return:
-#     """
-#     indices = np.arange(data.shape[0])
-#     np.random.shuffle(indices)
-#     data = data[indices]
-#     labels = labels[indices]
-#     num_validation_samples = int(VALIDATION_SPLIT * data.shape[0])
-#
-#     x_train = data[:-num_validation_samples]
-#     y_train = labels[:-num_validation_samples]
-#     x_val = data[-num_validation_samples:]
-#     y_val = labels[-num_validation_samples:]
-#
-#     return x_train, y_train, x_val, y_val
-
-
-# def preprocessing(train_texts, train_labels, test_texts, test_labels):
-#     tokenizer = Tokenizer(num_words=2000)  # 建立一个2000个单词的字典
-#     tokenizer.fit_on_texts(train_texts)
-#     # 对每一句影评文字转换为数字列表，使用每个词的编号进行编号
-#     x_train_seq = tokenizer.texts_to_sequences(train_texts)
-#     x_test_seq = tokenizer.texts_to_sequences(test_texts)
-#     x_train = sequence.pad_sequences(x_train_seq, maxlen=150)
-#     x_test = sequence.pad_sequences(x_test_seq, maxlen=150)
-#     y_train = np.array(train_labels)
-#     y_test = np.array(test_labels)
-#     return x_train, y_train, x_test, y_test
 
 
 if __name__ == "__main__":
