@@ -40,9 +40,9 @@ URL_5 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search'
 
 # 数据保存地址
 BASE_DIR = '/data0/search/textcnn/data/'
-DATA_0 = os.path.join(BASE_DIR, 'data_0.txt')  # 新闻语料
-DATA_1 = os.path.join(BASE_DIR, 'data_1.txt')  # 反例恐怖语料
-DATA_5 = os.path.join(BASE_DIR, 'data_5.txt')  # 反例色情语料
+DATA_0 = os.path.join(BASE_DIR, '/dataset/data_0.txt')  # 新闻语料
+DATA_1 = os.path.join(BASE_DIR, '/dataset/data_1.txt')  # 反例恐怖语料
+DATA_5 = os.path.join(BASE_DIR, '/dataset/data_5.txt')  # 反例色情语料
 
 
 def download():
