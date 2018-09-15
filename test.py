@@ -99,7 +99,7 @@ label_dict = {'location_traffic_convenience': 'l1',
               'others_willing_to_consume_again': 'l20'}
 
 # 打开停用词表并做处理
-STOP_WORDS_LIST = os.path.join(BASE_DIR, 'stop_list.txt')  # 停用词表
+STOP_WORDS_LIST = '/data0/search/textcnn/data/stop_list.txt'  # 停用词表
 with open(STOP_WORDS_LIST, 'r') as f:
     stop_words = f.readlines()
 del stop_words[0]  # 删除txt文件第一行的特殊字符
