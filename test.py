@@ -18,6 +18,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ========================================================================
+
+# transformer 模型
+# 带attention的lstm
+
 from keras.layers import Dense, Flatten, Conv1D, MaxPooling1D, Dropout, Input, concatenate, Embedding
 from keras.models import Model
 from keras.initializers import Constant
@@ -58,8 +62,38 @@ NUM_EPOCHS = 1
 # Prepossessing parameters
 MAX_SEQUENCE_LENGTH = 300
 MAX_NUM_WORDS = 150000  # 词典最大词数，若语料中含词数超过该数，则取前MAX_NUM_WORDS个
-NUM_LABELS = 2 # 分类数目
+NUM_LABELS = 4  # 分类数目
 
+#
+columns = ['id', 'content', 'location_traffic_convenience',
+           'location_distance_from_business_district', 'location_easy_to_find',
+           'service_wait_time', 'service_waiters_attitude',
+           'service_parking_convenience', 'service_serving_speed', 'price_level',
+           'price_cost_effective', 'price_discount', 'environment_decoration',
+           'environment_noise', 'environment_space', 'environment_cleaness',
+           'dish_portion', 'dish_taste', 'dish_look', 'dish_recommendation',
+           'others_overall_experience', 'others_willing_to_consume_again']
+
+label_dict = {'location_traffic_convenience': 'l1',
+              'location_distance_from_business_district': 'l2',
+              'location_easy_to_find': 'l3',
+              'service_wait_time': 'l4',
+              'service_waiters_attitude': 'l5',
+              'service_parking_convenience': 'l6',
+              'service_serving_speed': 'l7',
+              'price_level': 'l8',
+              'price_cost_effective': 'l9',
+              'price_discount': 'l10',
+              'environment_decoration': 'l11',
+              'environment_noise': 'l12',
+              'environment_space': 'l13',
+              'environment_cleaness': 'l14',
+              'dish_portion': 'l15',
+              'dish_taste': 'l16',
+              'dish_look': 'l17',
+              'dish_recommendation': 'l18',
+              'others_overall_experience': 'l19',
+              'others_willing_to_consume_again': 'l20'}
 
 # 打开停用词表并做处理
 STOP_WORDS_LIST = os.path.join(BASE_DIR, 'stop_list.txt')  # 停用词表
@@ -81,20 +115,34 @@ def prepare_data():
     :return:
     """
 
-    # 分词并保存结果
+    # 分词
     data = pd.read_csv(DATA_PATH)
     seg_data = data
-    seg_data['tokens'] = data['content'].map(segment)
-    seg_data.to_csv(SEG_DATA)
+    data['tokens'] = data['content'].map(segment)
+
+
+    # 标签处理与统计
+    # 将标签列名转换成['l1','l2',...,'l20']
+    # 将[-2,-1,0,1]转换成[0,1,2,3]
+    data.rename(columns=label_dict, inplace=True)
+    for i in range(20):
+        name = 'l' + str(i + 1)
+        data[name] = data[name].map(lambda x: x + 2)
+        series_i = pd.Series(data[name])
+        print('l1 value counts :\n')
+        print(series_i.value_counts())
+
+    # 保存处理后的结果
+    data.to_csv(SEG_DATA)
 
     # 获取word_index并保存
-    word_index = get_word_index(seg_data)
+    word_index = get_word_index(data)
     np.save(WORD_INDEX, word_index)
 
     # 序列化输入
-    test_data=seg_data[['tokens','location_traffic_convenience']]
-    test_data['indexes'] = test_data['tokens'].map(word2index)
-    numeric_data = test_data[['indexes', 'location_traffic_convenience']]
+    one_label_data = data[['tokens', 'l1']]
+    one_label_data['indexes'] = one_label_data['tokens'].map(word2index)
+    numeric_data = one_label_data[['indexes', 'l1']]
     numeric_data.to_csv(NUMERIC_DATA, encoding='utf-8')
 
     # 获取embeddings_index（加载预训练好的word2vec词典）
@@ -118,7 +166,7 @@ def pre_processing_multi_class():
     d1['index_array'] = d1['indexes'].map(lambda x: x.split(SEG_SPLITTER))
     sequences = d1['index_array']
     data = pad_sequences(sequences, maxlen=MAX_SEQUENCE_LENGTH, padding='post')
-    labels = d1['location_traffic_convenience'].values.reshape(-1, 1)
+    labels = d1['l1'].values.reshape(-1, 1)
     labels = to_categorical(labels)
     print('Shape of data tensor:', data.shape)
     print('Shape of label tensor:', labels.shape)
@@ -141,6 +189,7 @@ def pre_processing_multi_class():
     print('Shape of label y_test:', y_test.shape)
     return x_train, y_train, x_test, y_test
 
+
 def text_cnn_multi_class():
     """
     构建多分类text_cnn模型
@@ -153,7 +202,7 @@ def text_cnn_multi_class():
     # load pre-trained word embeddings into an Embedding layer
     # note that we set trainable = False so as to keep the embeddings fixed
     embedding_matrix = np.load(EMBEDDING_MATRIX)
-    num_words = embedding_matrix.shape[0]+1
+    num_words = embedding_matrix.shape[0] + 1
     embedding_layer = Embedding(num_words,
                                 EMBEDDING_DIM,
                                 embeddings_initializer=Constant(embedding_matrix),
