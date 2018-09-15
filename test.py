@@ -60,7 +60,7 @@ TEST_SPLIT = 0.2
 
 # Training parameters
 BATCH_SIZE = 64
-NUM_EPOCHS = 1
+NUM_EPOCHS = 5
 
 # Prepossessing parameters
 MAX_SEQUENCE_LENGTH = 300
