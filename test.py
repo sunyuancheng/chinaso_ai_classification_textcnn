@@ -34,14 +34,17 @@ import os
 import numpy as np
 
 # 数据保存地址
-BASE_DIR = '/data0/search/textcnn/data/'
-WORD2VEC = os.path.join(BASE_DIR, 'sgns.merge.bigram')  # word2vec词典地址
+BASE_DIR = '/data0/search/ai_challenger/2/'
+WORD2VEC = '/data0/search/textcnn/data/sgns.merge.bigram'
+DATA_PATH = os.path.join(BASE_DIR, 'data/train/sentiment_analysis_trainingset.csv')
+WORD_INDEX = os.path.join(BASE_DIR, 'data/word_index.npy')
+EMBEDDING_MATRIX = os.path.join(BASE_DIR, 'data/embedding_matrix.npy')
+SEG_DATA = os.path.join(BASE_DIR, 'data/seg_data.csv')
 
-DATA_PATH = '/application/search/ming/ai_challenger/train/sentiment_analysis_trainingset.csv'
-SEG_DATA = '/application/search/ming/ai_challenger/train/seg_data.csv'
-WORD_INDEX = '/application/search/ming/ai_challenger/train/word_index.npy'
-EMBEDDING_MATRIX = '/application/search/ming/ai_challenger/train/embedding_matrix.npy'
-NUMERIC_DATA = '/application/search/ming/ai_challenger/train/numeric_data.csv'
+
+MODEL_DIR = os.path.join(BASE_DIR, 'text2label123/')
+NUMERIC_DATA = os.path.join(MODEL_DIR, 'numeric_data.csv')
+MODEL = os.path.join(MODEL_DIR, 'model.h5')
 
 SEG_SPLITTER = ' '
 word_index = {}
@@ -62,7 +65,7 @@ NUM_EPOCHS = 1
 # Prepossessing parameters
 MAX_SEQUENCE_LENGTH = 300
 MAX_NUM_WORDS = 150000  # 词典最大词数，若语料中含词数超过该数，则取前MAX_NUM_WORDS个
-NUM_LABELS = 4  # 分类数目
+NUM_LABELS = 64  # 分类数目
 
 #
 columns = ['id', 'content', 'location_traffic_convenience',
@@ -120,7 +123,6 @@ def prepare_data():
     seg_data = data
     data['tokens'] = data['content'].map(segment)
 
-
     # 标签处理与统计
     # 将标签列名转换成['l1','l2',...,'l20']
     # 将[-2,-1,0,1]转换成[0,1,2,3]
@@ -132,17 +134,28 @@ def prepare_data():
         print('l1 value counts :\n')
         print(series_i.value_counts())
 
-    # 保存处理后的结果
-    data.to_csv(SEG_DATA)
-
     # 获取word_index并保存
     word_index = get_word_index(data)
     np.save(WORD_INDEX, word_index)
 
     # 序列化输入
-    one_label_data = data[['tokens', 'l1']]
-    one_label_data['indexes'] = one_label_data['tokens'].map(word2index)
-    numeric_data = one_label_data[['indexes', 'l1']]
+    data['indexes'] = data['tokens'].map(word2index)
+
+    # 保存处理后的结果
+    data.to_csv(SEG_DATA)
+
+    # 处理标签
+    # one_label_data = data[['tokens', 'l1']]
+    # numeric_data = one_label_data[['indexes', 'l1']]
+    # numeric_data.to_csv(NUMERIC_DATA, encoding='utf-8')
+    three_label_data = data[['indexes', 'l1', 'l2', 'l3']]
+    three_label_data['labels'] = three_label_data['l1'].map(lambda x: x * 16) + \
+                                 three_label_data['l2'].map(lambda x: x * 4) + \
+                                 three_label_data['l3']
+    print(pd.Series(three_label_data['labels']).value_counts())
+    numeric_data = three_label_data[['indexes', 'labels']]
+
+    # 保存结果
     numeric_data.to_csv(NUMERIC_DATA, encoding='utf-8')
 
     # 获取embeddings_index（加载预训练好的word2vec词典）
@@ -166,7 +179,7 @@ def pre_processing_multi_class():
     d1['index_array'] = d1['indexes'].map(lambda x: x.split(SEG_SPLITTER))
     sequences = d1['index_array']
     data = pad_sequences(sequences, maxlen=MAX_SEQUENCE_LENGTH, padding='post')
-    labels = d1['l1'].values.reshape(-1, 1)
+    labels = d1['labels'].values.reshape(-1, 1)
     labels = to_categorical(labels)
     print('Shape of data tensor:', data.shape)
     print('Shape of label tensor:', labels.shape)
@@ -337,3 +350,5 @@ if __name__ == '__main__':
               shuffle=True)
     scores = model.evaluate(x_test, y_test)
     print('test_loss: %f, accuracy: %f' % (scores[0], scores[1]))
+
+    model.save(MODEL)
