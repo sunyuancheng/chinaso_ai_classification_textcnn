@@ -35,13 +35,14 @@ HORROR_DATA_API = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/013
                   '|EQS_newsLabel,%E6%81%90%E6%80%96&pagestart=1&fetchsize=10000'
 
 # 反例数据接口：色情
-SEX_DATA_API = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search' \
-               '?fields=id,wcaption&filters=EQS_resourceState,4' \
-               '|EQS_newsLabel,%E8%89%B2%E6%83%85&pagestart=1&fetchsize=10000'
+SEX_DATA_API = 'http://data.mgt.chinaso365.com/datasrv/1.0/resources/01344/search' \
+               '?fields=id,wcaption&filters=EQS_resourceState,4|EQS_newsLabel,%E8%89%B2%E6%83%85%7C' \
+               'NES_newsLabelSecond,%E8%89%B2%E6%83%85%E5%B0%8F%E8%AF%B4&pagestart=1&fetchsize=10000'
 
-SEX_DATA_API_2 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search' \
-                 '?fields=id,wcaption&filters=EQS_resourceState,4' \
-                 '|EQS_newsLabel,%E8%89%B2%E6%83%85&pagestart=1&fetchsize=10000'
+# 反例数据接口：色情2
+SEX_DATA_API_2 = 'http://data.mgt.chinaso365.com/datasrv/1.0/resources/01344/search' \
+                 '?fields=id,wcaption,picSet&filters=EQS_resourceState,4|EQS_newsLabel,%E8%89%B2%E6%83%85%7C' \
+                 'EQS_newsLabelSecond,%E8%89%B2%E6%83%85%E5%B0%8F%E8%AF%B4&pagestart=1&fetchsize=10'
 
 label_index = {'news': 0, 'horror': 1, 'violence': 2, 'dirty_words': 3, 'suicide': 4, 'sex': 5}
 
