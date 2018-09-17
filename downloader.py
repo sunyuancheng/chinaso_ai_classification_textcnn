@@ -59,7 +59,7 @@ def download():
     get_data_from_api(NEWS_DATA, NEWS_DATA_API, 'news')
     get_data_from_api(HORROR_DATA, HORROR_DATA_API, 'horror')
     get_data_from_api(SEX_DATA, SEX_DATA_API, 'sex')
-    get_data_from_api_2(SEX_DATA2, SEX_DATA_API_2, 'sex2')
+    # get_data_from_api_2(SEX_DATA2, SEX_DATA_API_2, 'sex2')
 
 
 def get_data_from_api(data_path, api, pre_process_type):
@@ -92,33 +92,15 @@ def get_data_from_api_2(data_path, api, pre_process_type):
     with open(data_path, 'w') as f:
         with urllib.request.urlopen(api) as response:
             resp = response.read()
-            captions = json.loads(resp)
+            captions = json.loads(resp).get('value')
             for item in captions:
-                line = item.get('wcaption')
+                caption = item.get('wcaption')
                 if item.get('picSet') != None:
                     for pic in item.get('picSet'):
-                        line = line + pic.get('caption')
-                line = pre_process(line, pre_process_type)
-                if len(line) > int(100):
+                        caption = caption + pic.get('caption')
+                line = pre_process(caption, pre_process_type)          
+                if len(line)>int(100):
                     f.write(line + '\n')
-
-
-def pre_process(input_line, pre_process_type):
-    """
-    数据预处理
-    :param input_line: 输入数据行
-    :param pre_process_type: 预处理类型
-    :return: 输出数据行
-    """
-    output_line = input_line.replace(',', '，')  # 英文逗号为默认csv分隔符
-    if pre_process_type == 'news':
-        output_line = output_line.replace('|', '')
-    elif pre_process_type == 'horror':
-        output_line = output_line.replace('免费订阅精彩鬼故事，微信号：guidayecom', '')
-    elif pre_process_type == 'sex2':
-        output_line = output_line.replace('(转载请注明来源cna5两性网www.cna5.cc)', '').replace('性爱 CNA5两性健康网', '').replace(
-            'CNA5两性健康网', '')
-    return output_line
 
 
 if __name__ == '__main__':
