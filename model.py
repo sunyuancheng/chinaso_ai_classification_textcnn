@@ -241,6 +241,7 @@ if __name__ == "__main__":
               shuffle=True)
     scores = model.evaluate(x_test, y_test)
     print('test_loss: %f, accuracy: %f' % (scores[0], scores[1]))
+    model.predict(x_test[0])
 
     # model.save(MODEL)
     # model = load_model(MODEL)
