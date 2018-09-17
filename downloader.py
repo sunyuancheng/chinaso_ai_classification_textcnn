@@ -24,89 +24,88 @@ import os
 import json
 
 # 新闻数据接口
-URL_0 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01276/search' \
-        '?fields=id,wcaption&filters=EQS_ifCompare,1|EQS_resourceState,4|EQS_newsLabelSecond,' \
-        '%E6%97%B6%E6%94%BF%E6%BB%9A%E5%8A%A8&orders=wpubTime_desc' \
-        '&pagestart=1&fetchsize=10000'
+NEWS_DATA_API = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01276/search' \
+                '?fields=id,wcaption&filters=EQS_ifCompare,1|EQS_resourceState,4|EQS_newsLabelSecond,' \
+                '%E6%97%B6%E6%94%BF%E6%BB%9A%E5%8A%A8&orders=wpubTime_desc' \
+                '&pagestart=1&fetchsize=10000'
 
 # 反例数据接口：恐怖
-URL_1 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search' \
-        '?fields=id,wcaption&filters=EQS_resourceState,4' \
-        '|EQS_newsLabel,%E6%81%90%E6%80%96&pagestart=1&fetchsize=10000'
+HORROR_DATA_API = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search' \
+                  '?fields=id,wcaption&filters=EQS_resourceState,4' \
+                  '|EQS_newsLabel,%E6%81%90%E6%80%96&pagestart=1&fetchsize=10000'
 
 # 反例数据接口：色情
-URL_5 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search' \
-        '?fields=id,wcaption&filters=EQS_resourceState,4' \
-        '|EQS_newsLabel,%E8%89%B2%E6%83%85&pagestart=1&fetchsize=10000'
+SEX_DATA_API = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search' \
+               '?fields=id,wcaption&filters=EQS_resourceState,4' \
+               '|EQS_newsLabel,%E8%89%B2%E6%83%85&pagestart=1&fetchsize=10000'
+
+SEX_DATA_API_2 = 'http://data.mgt.chinaso365.com/datasrv/2.0/news/resources/01344/search' \
+                 '?fields=id,wcaption&filters=EQS_resourceState,4' \
+                 '|EQS_newsLabel,%E8%89%B2%E6%83%85&pagestart=1&fetchsize=10000'
 
 label_index = {'news': 0, 'horror': 1, 'violence': 2, 'dirty_words': 3, 'suicide': 4, 'sex': 5}
 
 # 数据保存地址
 BASE_DIR = '/data0/search/textcnn/data/'
 DATASET = os.path.join(BASE_DIR, 'dataset/')  # 数据集文件夹
-DATA_0 = os.path.join(BASE_DIR, 'dataset/news/data_0.txt')  # 新闻语料
-DATA_1 = os.path.join(BASE_DIR, 'dataset/horror/data_1.txt')  # 反例恐怖语料
-DATA_5 = os.path.join(BASE_DIR, 'dataset/sex/data_5.txt')  # 反例色情语料
-DATA_TEST = os.path.join(BASE_DIR, 'data_55.txt')
+NEWS_DATA = os.path.join(DATASET, 'news/data_0.txt')  # 新闻语料
+HORROR_DATA = os.path.join(DATASET, 'horror/data_1.txt')  # 反例恐怖语料
+SEX_DATA = os.path.join(DATASET, 'sex/data_5.txt')  # 反例色情语料
+SEX_DATA2 = os.path.join(DATASET, 'sex/data_55.txt')  # 反例色情语料
 
 
 def download():
-    get_data_0_from_api()
-    get_data_1_from_api()
-    get_data_5_from_api()
+    get_data_from_api(NEWS_DATA, NEWS_DATA_API, 'news')
+    get_data_from_api(HORROR_DATA, HORROR_DATA_API, 'horror')
+    get_data_from_api(SEX_DATA, SEX_DATA_API, 'sex')
+    get_data_from_api_2(SEX_DATA2, SEX_DATA_API_2, 'sex2')
 
 
-def get_data_0_from_api():
+def get_data_from_api(data_path, api, pre_process_type):
     """
-    通过接口获取新闻数据，并保存至文件
-    含有简单文本过滤，并替换CSV文件分隔符：英文逗号
+    通过接口获取数据，并保存至文件
+    :param data_path: 保存路径
+    :param api: 接口
+    :param pre_process_type: 预处理类型
     :return:
     """
-    with open(DATA_0, 'w') as f:
-        with urllib.request.urlopen(URL_1) as response:
+    with open(data_path, 'w') as f:
+        with urllib.request.urlopen(api) as response:
             resp = response.read()
             j1 = json.loads(resp)
             results = j1['value']
             for result in results:
-                line = result.get('wcaption') \
-                    .replace(',', '，') \
-                    .replace('|', '')
+                line = result.get('wcaption')
+                line = pre_process(line, pre_process_type)
                 f.write(line + '\n')
 
 
-def get_data_1_from_api():
+def get_data_from_api_2(data_path, api, pre_process_type):
     """
-    通过接口获得反例恐怖数据，并保存至文件
-    含有简单文本过滤，并替换CSV文件分隔符：英文逗号
+    通过接口2获取数据，并保存至文件
+    :param data_path: 保存路径
+    :param api: 接口
+    :param pre_process_type: 预处理类型
     :return:
     """
-    with open(DATA_1, 'w') as f:
-        with urllib.request.urlopen(URL_1) as response:
-            resp = response.read()
-            j1 = json.loads(resp)
-            results = j1['value']
-            for result in results:
-                line = result.get('wcaption') \
-                    .replace(',', '，') \
-                    .replace('免费订阅精彩鬼故事，微信号：guidayecom', '')
-                f.write(line + '\n')
+    pass
 
 
-def get_data_5_from_api():
+def pre_process(input_line, pre_process_type):
     """
-    通过接口获取正例色情数据，并保存至文件
-    含有简单文本过滤，并替换CSV文件分隔符：英文逗号
-    :return:
+    数据预处理
+    :param input_line: 输入数据行
+    :param pre_process_type: 预处理类型
+    :return: 输出数据行
     """
-    with open(DATA_5, 'w') as f:
-        with urllib.request.urlopen(URL_5) as response:
-            resp = response.read()
-            j1 = json.loads(resp)
-            results = j1['value']
-            for result in results:
-                line = result.get('wcaption') \
-                    .replace(',', '，')
-                f.write(line + '\n')
+    output_line = input_line.replace(',', '，')
+    if pre_process_type == 'news':
+        output_line = output_line.replace('|', '')
+    elif pre_process_type == 'horror':
+        output_line = output_line.replace('免费订阅精彩鬼故事，微信号：guidayecom', '')
+
+    return output_line
+
 
 
 if __name__ == '__main__':
