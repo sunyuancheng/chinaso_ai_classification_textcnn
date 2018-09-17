@@ -19,6 +19,7 @@
 # limitations under the License.
 # ========================================================================
 import urllib
+import urllib.request
 import os
 import json
 
@@ -80,7 +81,7 @@ def get_data_1_from_api():
     :return:
     """
     with open(DATA_1, 'w') as f:
-        with urllib.request.urlopen(URL_0) as response:
+        with urllib.request.urlopen(URL_1) as response:
             resp = response.read()
             j1 = json.loads(resp)
             results = j1['value']
