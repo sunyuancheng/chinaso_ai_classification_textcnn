@@ -59,7 +59,7 @@ def download():
     get_data_from_api(NEWS_DATA, NEWS_DATA_API, 'news')
     get_data_from_api(HORROR_DATA, HORROR_DATA_API, 'horror')
     get_data_from_api(SEX_DATA, SEX_DATA_API, 'sex')
-    get_data_from_api_2(SEX_DATA2, SEX_DATA_API_2, 'sex2')
+    # get_data_from_api_2(SEX_DATA2, SEX_DATA_API_2, 'sex2')
 
 
 def get_data_from_api(data_path, api, pre_process_type):
@@ -99,14 +99,12 @@ def pre_process(input_line, pre_process_type):
     :param pre_process_type: 预处理类型
     :return: 输出数据行
     """
-    output_line = input_line.replace(',', '，')
+    output_line = input_line.replace(',', '，')  # 英文逗号为默认csv分隔符
     if pre_process_type == 'news':
         output_line = output_line.replace('|', '')
     elif pre_process_type == 'horror':
         output_line = output_line.replace('免费订阅精彩鬼故事，微信号：guidayecom', '')
-
     return output_line
-
 
 
 if __name__ == '__main__':
